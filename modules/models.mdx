@@ -1,0 +1,236 @@
+---
+title: "Models"
+description: "Complete reference for the `models` module — linear regression, multi-feature regression, beta calculation, and LSTM forecasting."
+---
+
+The `models` module provides machine learning and statistical tools for forecasting and risk analysis. All forecasting functions accept pandas DataFrames and return DataFrames with future predictions appended.
+
+```python
+from axion import models
+```
+
+---
+
+## Linear regression
+
+### `models.linearRegression` — Single-feature linear regression forecast
+
+Fits a linear regression model using a timestamp column as the only feature, then projects `n_preds` future values at the specified time scale. Returns a DataFrame containing the original data plus predicted future rows.
+
+```python
+predictions = models.linearRegression(df, x="time", target="close", n_preds=10, scale="D")
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Name of the timestamp column. Values are converted to Unix timestamps internally.
+</ParamField>
+<ParamField path="target" type="string" required>
+  Name of the column to predict.
+</ParamField>
+<ParamField path="n_preds" type="number" default="10">
+  Number of future periods to forecast.
+</ParamField>
+<ParamField path="scale" type="string" default="D">
+  Time scale of the forecast steps. `"D"` for daily, `"W"` for weekly, `"M"` for monthly, `"Y"` for yearly.
+</ParamField>
+
+---
+
+### `models.multiLinearRegression` — Multi-feature linear regression forecast
+
+Fits a linear regression model using a timestamp column plus one or more additional feature columns. Extrapolates features forward using their own trends before predicting. Use this when price is correlated with other measurable signals (e.g., volume, RSI, fundamentals).
+
+<Note>
+  The difference between `linearRegression` and `multiLinearRegression` is the `features` parameter. `linearRegression` uses only time as the predictor; `multiLinearRegression` also includes the columns you specify in `features`.
+</Note>
+
+```python
+predictions = models.multiLinearRegression(
+    df,
+    x="time",
+    target="close",
+    features=["volume", "rsi", "ema_21"],
+    n_preds=10,
+    scale="D"
+)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame with the target and all feature columns present.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Name of the timestamp column.
+</ParamField>
+<ParamField path="target" type="string" required>
+  Name of the column to predict.
+</ParamField>
+<ParamField path="features" type="string[]" required>
+  List of additional feature column names to include as predictors.
+</ParamField>
+<ParamField path="n_preds" type="number" default="10">
+  Number of future periods to forecast.
+</ParamField>
+<ParamField path="scale" type="string" default="D">
+  Time scale of the forecast steps.
+</ParamField>
+
+---
+
+## Beta
+
+### `models.beta` — Calculate beta coefficient
+
+Calculates the beta of a stock relative to a market benchmark. Beta measures a stock's sensitivity to market movements: a beta above 1.0 indicates higher volatility than the market; below 1.0 indicates lower volatility.
+
+```python
+beta_value = models.beta(df, x="stock_return", y="market_return")
+print(f"Beta: {beta_value:.4f}")
+```
+
+<ParamField path="df" type="DataFrame" required>
+  DataFrame containing both the stock return and market return columns.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for the stock's return series.
+</ParamField>
+<ParamField path="y" type="string" required>
+  Column name for the market's return series (benchmark).
+</ParamField>
+
+Returns a single `float`.
+
+```python
+from axion import Axion, models, utils
+
+client = Axion(api_key="your_api_key")
+
+# Fetch AAPL and SPY prices
+df_aapl = utils.df(client.stocks.prices("AAPL", from_date=utils.yearago))
+df_spy  = utils.df(client.stocks.prices("SPY",  from_date=utils.yearago))
+
+# Align and compute returns
+df = utils.stitch([df_aapl, df_spy], col="time")
+df = utils.relativity(df, cols=["close_x", "close_y"])
+
+beta = models.beta(df, x="close_x_pct", y="close_y_pct")
+print(f"AAPL beta vs SPY: {beta:.4f}")
+```
+
+---
+
+## LSTM
+
+### `models.lstm` — LSTM deep learning forecast
+
+Trains a Keras LSTM (Long Short-Term Memory) neural network on the provided data and returns a DataFrame with `n_preds` future predictions. LSTM models capture non-linear temporal dependencies that linear models miss.
+
+<Warning>
+  `models.lstm` requires TensorFlow to be installed: `pip install tensorflow`. Training runs for 50 epochs and may take several minutes depending on dataset size and hardware.
+</Warning>
+
+```python
+predictions = models.lstm(
+    df,
+    x="time",
+    target="close",
+    features=["volume", "rsi", "ema_21"],
+    n_preds=10,
+    scale="D"
+)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Name of the timestamp column.
+</ParamField>
+<ParamField path="target" type="string" required>
+  Name of the column to predict.
+</ParamField>
+<ParamField path="features" type="string[]" default="[]">
+  Optional list of additional feature column names. When empty, only the target and timestamp are used.
+</ParamField>
+<ParamField path="n_preds" type="number" default="10">
+  Number of future periods to forecast.
+</ParamField>
+<ParamField path="scale" type="string" default="D">
+  Time scale of the forecast steps. `"D"` for daily, `"W"` for weekly, `"M"` for monthly, `"Y"` for yearly.
+</ParamField>
+
+<Tip>
+  Add technical indicators as features before calling `models.lstm`. RSI, EMA, ATR, and volume are commonly useful signals. Ensure there are no `NaN` values in the feature columns — drop or fill them before passing the DataFrame.
+</Tip>
+
+---
+
+## Complete forecasting workflow
+
+The following example shows the full pipeline: fetching data, computing features, fitting three models, and comparing their outputs.
+
+```python
+from axion import Axion, ta, models, visualize, utils
+
+client = Axion(api_key="your_api_key")
+
+# 1. Fetch two years of daily AAPL prices
+df = utils.df(client.stocks.prices("AAPL", from_date=utils.d("2 years ago")))
+
+# 2. Compute technical features
+df["ema_21"] = ta.ema(df, period=21)
+df["rsi"]    = ta.rsi(df, period=14)
+df["atr"]    = ta.atr(df, period=14)
+df["obv"]    = ta.obv(df)
+
+# Drop rows where indicators haven't warmed up yet
+df = df.dropna()
+
+# 3. Simple linear regression (time only)
+lr_preds = models.linearRegression(
+    df,
+    x="time",
+    target="close",
+    n_preds=30,
+    scale="D"
+)
+
+# 4. Multi-feature linear regression
+mlr_preds = models.multiLinearRegression(
+    df,
+    x="time",
+    target="close",
+    features=["ema_21", "rsi", "atr", "volume"],
+    n_preds=30,
+    scale="D"
+)
+
+# 5. LSTM (requires tensorflow)
+lstm_preds = models.lstm(
+    df,
+    x="time",
+    target="close",
+    features=["ema_21", "rsi", "atr", "volume"],
+    n_preds=30,
+    scale="D"
+)
+
+# 6. Visualize all three forecasts
+visualize.polls(utils.snap(
+    [lr_preds[["time", "close"]], mlr_preds[["time", "close"]], lstm_preds[["time", "close"]]],
+    names=["LR", "MLR", "LSTM"],
+    overwrite=["close"],
+    col="time"
+))
+```
+
+### Choosing a model
+
+| Model | When to use |
+|---|---|
+| `linearRegression` | Baseline forecast where price trend is approximately linear over time. Fast to compute. |
+| `multiLinearRegression` | When additional signals (volume, indicators, fundamentals) have a measurable linear relationship with price. |
+| `models.beta` | Risk measurement and portfolio construction — not a price forecast. |
+| `lstm` | When relationships are non-linear or temporal dependencies span many periods. Significantly slower to train. |

@@ -1,0 +1,69 @@
+---
+title: ESG
+description: Access Environmental, Social, and Governance (ESG) scores for publicly listed companies.
+---
+
+The `client.esg` namespace provides ESG ratings and component scores for companies. ESG scores help evaluate a company’s exposure to long-term sustainability risks and ethical practices.
+
+## Methods
+
+### `data`
+
+Returns ESG scores for the given ticker, including total ESG score and individual environmental, social, and governance component scores.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`, `"MSFT"`).
+</ParamField>
+
+```python
+esg = client.esg.data("AAPL")
+print(esg["totalEsg"])
+print(esg["environmentScore"])
+print(esg["socialScore"])
+print(esg["governanceScore"])
+print(esg["esgPerformance"])  # e.g. UNDER_PERF, AVG_PERF, OUT_PERF
+```
+
+<Info>
+  ESG scores are typically updated on a periodic basis (quarterly or annually) and may reflect data from the most recent reporting period.
+</Info>
+
+## Return fields
+
+| Field | Description |
+|---|---|
+| `totalEsg` | Composite ESG risk score |
+| `environmentScore` | Environmental risk component score |
+| `socialScore` | Social risk component score |
+| `governanceScore` | Governance risk component score |
+| `esgPerformance` | Performance label relative to sector peers |
+| `peerCount` | Number of peers used in comparison |
+| `percentile` | Company’s percentile rank within its peer group |
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+tickers = ["AAPL", "MSFT", "GOOGL", "AMZN"]
+
+print(f"{'Ticker':<8} {'Total':>6} {'Env':>6} {'Social':>6} {'Gov':>6} {'Performance'}")
+print("-" * 55)
+
+for t in tickers:
+    esg = client.esg.data(t)
+    print(
+        f"{t:<8}"
+        f"{esg.get('totalEsg', 'N/A'):>6}"
+        f"{esg.get('environmentScore', 'N/A'):>6}"
+        f"{esg.get('socialScore', 'N/A'):>6}"
+        f"{esg.get('governanceScore', 'N/A'):>6}"
+        f"  {esg.get('esgPerformance', '')}"
+    )
+```
+
+<Note>
+  Lower ESG risk scores generally indicate less exposure to ESG-related risks. Score interpretation may vary by data provider methodology.
+</Note>

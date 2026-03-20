@@ -1,0 +1,67 @@
+---
+title: Web Traffic
+description: Retrieve website traffic analytics data for publicly listed companies.
+---
+
+The `client.web_traffic` namespace provides web analytics data for company websites, allowing you to track visitor trends as an alternative data signal alongside traditional financial metrics.
+
+## Methods
+
+### `traffic`
+
+Returns website traffic and analytics data for the company associated with the given ticker.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AMZN"`, `"SHOP"`).
+</ParamField>
+
+```python
+traffic = client.web_traffic.traffic("AMZN")
+print(traffic)
+```
+
+## Return fields
+
+| Field | Description |
+|---|---|
+| `monthlyVisitors` | Estimated monthly unique visitor count |
+| `visitDuration` | Average time spent per visit |
+| `pagesPerVisit` | Average number of pages viewed per session |
+| `bounceRate` | Percentage of single-page sessions |
+| `globalRank` | Global website traffic rank |
+| `countryRank` | Traffic rank within the primary country |
+| `topCountries` | List of top countries by traffic share |
+
+<Info>
+  Web traffic data is an alternative data source. It is particularly useful for consumer-facing companies and e-commerce businesses where web traffic correlates with revenue activity.
+</Info>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# Compare web traffic for e-commerce companies
+tickers = ["AMZN", "SHOP", "EBAY", "ETSY"]
+
+print(f"{'Ticker':<8} {'Monthly Visitors':>18} {'Bounce Rate':>12} {'Global Rank':>12}")
+print("-" * 55)
+
+for t in tickers:
+    try:
+        traffic = client.web_traffic.traffic(t)
+        print(
+            f"{t:<8}"
+            f"{traffic.get('monthlyVisitors', 'N/A'):>18,}"
+            f"{traffic.get('bounceRate', 'N/A'):>12}"
+            f"{traffic.get('globalRank', 'N/A'):>12}"
+        )
+    except Exception as e:
+        print(f"{t:<8} Error: {e}")
+```
+
+<Note>
+  Web traffic estimates are sourced from third-party analytics providers and represent approximations. They should be used as directional signals rather than precise measurements.
+</Note>

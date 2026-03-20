@@ -1,97 +1,88 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Axion Python SDK"
+description: "Financial market data, technical analysis, visualization, and machine learning for quantitative research."
 ---
 
-## Setting up
+The Axion Python SDK gives you access to real-time and historical market data across stocks, crypto, forex, futures, and indices — along with built-in technical analysis, interactive charting, and ML forecasting tools, all designed for use in Jupyter notebooks and Python scripts.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install the SDK and make your first API call in under five minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="API Client" icon="database" href="/client/overview">
+    Browse all market data endpoints: stocks, crypto, forex, financials, filings, and more.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Technical Analysis" icon="chart-line" href="/modules/technical-analysis">
+    25+ indicators including RSI, MACD, Bollinger Bands, Ichimoku, and Parabolic SAR.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Visualization" icon="chart-bar" href="/modules/visualization">
+    Interactive Plotly charts — candlesticks, scatter, heatmaps, treemaps, and more.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What you can build
 
-Everything you need to create world-class documentation.
+<CardGroup cols={3}>
+  <Card title="Market screeners" icon="magnifying-glass-chart">
+    Fetch tickers across asset classes and filter by country, exchange, or sector.
+  </Card>
+  <Card title="Backtesting pipelines" icon="rotate-left">
+    Pull historical OHLCV data and run technical indicators in a pandas DataFrame workflow.
+  </Card>
+  <Card title="Earnings models" icon="building-columns">
+    Access earnings history, analyst trends, and SEC filings with a single call.
+  </Card>
+  <Card title="Sentiment dashboards" icon="face-smile">
+    Combine social, news, and analyst sentiment data for any ticker.
+  </Card>
+  <Card title="ML forecasting" icon="brain">
+    Use built-in linear regression, multi-feature regression, and LSTM models to predict prices.
+  </Card>
+  <Card title="Portfolio analysis" icon="briefcase">
+    Calculate beta, correlations, gainers/losers, and composite indices across holdings.
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Five modules, one import
 
-## Need inspiration?
+```python
+from axion import Axion        # REST API client
+from axion import ta           # Technical analysis indicators
+from axion import visualize    # Interactive Plotly charts
+from axion import utils        # DataFrame & date utilities
+from axion import models       # ML / forecasting models
+```
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Quick example
+
+```python quickstart.py
+from axion import Axion, ta, visualize, utils as axion_utils
+
+# Initialize the client
+client = Axion(api_key="your_api_key_here")
+
+# Fetch daily prices for Apple
+prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+df = axion_utils.df(prices)
+
+# Compute a 14-period RSI
+df["rsi"] = ta.rsi(df, column="close", period=14)
+
+# Render a candlestick chart
+visualize.candles(df)
+```
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/guides/authentication">
+    Get your API key and learn how to pass it to the client.
+  </Card>
+  <Card title="Working with DataFrames" icon="table" href="/guides/dataframes">
+    Convert API responses to pandas DataFrames and manipulate them with the utils module.
+  </Card>
+  <Card title="Error handling" icon="triangle-exclamation" href="/guides/error-handling">
+    Handle HTTP errors, timeouts, and authentication failures gracefully.
+  </Card>
+  <Card title="Caching" icon="hard-drive" href="/guides/caching">
+    Persist API results locally to avoid redundant requests during research sessions.
+  </Card>
+</CardGroup>

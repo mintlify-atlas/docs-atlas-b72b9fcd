@@ -1,0 +1,601 @@
+---
+title: "Technical Analysis"
+description: "Complete reference for the `ta` module — 25+ indicators for trend, momentum, volatility, volume, and trend direction analysis."
+---
+
+The `ta` module provides technical analysis indicators that operate on pandas DataFrames with standard OHLCV columns (`open`, `high`, `low`, `close`, `volume`). All functions return a pandas `Series`, or a tuple of `Series` for multi-output indicators.
+
+```python
+from axion import ta
+```
+
+## Trend indicators
+
+Moving averages smooth price data to identify the direction of a trend.
+
+### `ta.sma` — Simple Moving Average
+
+```python
+df["sma_20"] = ta.sma(df, column="close", period=20)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to compute the average over.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.ema` — Exponential Moving Average
+
+Weights recent prices more heavily than older prices.
+
+```python
+df["ema_14"] = ta.ema(df, column="close", period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to compute the average over.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.dema` — Double Exponential Moving Average
+
+Reduces lag by applying EMA twice.
+
+```python
+df["dema"] = ta.dema(df, column="close", period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to smooth.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.ssma` — Smoothed Simple Moving Average
+
+A Wilder-style smoothed moving average with reduced noise.
+
+```python
+df["ssma"] = ta.ssma(df, column="close", period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to smooth.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.trima` — Triangular Moving Average
+
+Double-smoothed SMA that places the most weight on the middle of the period.
+
+```python
+df["trima"] = ta.trima(df, column="close", period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to smooth.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.kama` — Kaufman's Adaptive Moving Average
+
+Adjusts its speed based on market noise using an efficiency ratio. Slower in choppy markets, faster in trending markets.
+
+```python
+df["kama"] = ta.kama(df, column="close", period=14, fast=14, slow=30)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to smooth.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Efficiency ratio lookback.
+</ParamField>
+<ParamField path="fast" type="number" default="14">
+  Fast EMA period (used in trending markets).
+</ParamField>
+<ParamField path="slow" type="number" default="30">
+  Slow EMA period (used in choppy markets).
+</ParamField>
+
+### Trend example
+
+```python
+from axion import Axion, ta, utils
+
+client = Axion(api_key="your_api_key")
+df = utils.df(client.stocks.prices("AAPL", from_date="2024-01-01"))
+
+df["sma_50"] = ta.sma(df, period=50)
+df["ema_21"] = ta.ema(df, period=21)
+df["kama"]   = ta.kama(df, period=14, fast=14, slow=30)
+
+print(df[["time", "close", "sma_50", "ema_21", "kama"]].tail())
+```
+
+---
+
+## Momentum and oscillators
+
+### `ta.rsi` — Relative Strength Index
+
+Measures the speed and magnitude of price changes. Values range from 0 to 100. Readings above 70 are typically considered overbought; below 30 oversold.
+
+```python
+df["rsi"] = ta.rsi(df, column="close", period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to evaluate.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.macd` — Moving Average Convergence Divergence
+
+Returns three Series: the MACD line, signal line, and histogram.
+
+<Note>
+  `ta.macd` returns a **tuple of three Series** — unpack them explicitly.
+</Note>
+
+```python
+macd_line, signal_line, histogram = ta.macd(df, column="close", fast_period=12, slow_period=26, signal_period=9)
+df["macd"]      = macd_line
+df["signal"]    = signal_line
+df["histogram"] = histogram
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to compute MACD on.
+</ParamField>
+<ParamField path="fast_period" type="number" default="12">
+  Fast EMA period.
+</ParamField>
+<ParamField path="slow_period" type="number" default="26">
+  Slow EMA period.
+</ParamField>
+<ParamField path="signal_period" type="number" default="9">
+  Signal line EMA period.
+</ParamField>
+
+---
+
+### `ta.roc` — Rate of Change
+
+Expresses price change as a percentage over a lookback period.
+
+```python
+df["roc"] = ta.roc(df, column="close", period=10)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to evaluate.
+</ParamField>
+<ParamField path="period" type="number" default="10">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.mom` — Momentum
+
+Absolute price difference over a lookback period (`close[t] - close[t-n]`).
+
+```python
+df["mom"] = ta.mom(df, column="close", period=10)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to evaluate.
+</ParamField>
+<ParamField path="period" type="number" default="10">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.cmo` — Chande Momentum Oscillator
+
+Variant of RSI that uses the sum of all up and down changes. Ranges from -100 to +100.
+
+```python
+df["cmo"] = ta.cmo(df, column="close", period=20)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to evaluate.
+</ParamField>
+<ParamField path="period" type="number" default="20">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.stochastic_oscillator` — Stochastic Oscillator
+
+Compares a closing price to its price range over a period. Returns two Series: the `%K` line and the `%D` signal line.
+
+<Note>
+  Returns a **tuple of two Series** — `(K, D)`.
+</Note>
+
+```python
+k, d = ta.stochastic_oscillator(df, k_period=14, d_period=3)
+df["stoch_k"] = k
+df["stoch_d"] = d
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="k_period" type="number" default="14">
+  %K lookback period.
+</ParamField>
+<ParamField path="d_period" type="number" default="3">
+  %D smoothing period.
+</ParamField>
+
+---
+
+### `ta.williams_r` — Williams %R
+
+Momentum oscillator measuring overbought/oversold levels. Ranges from -100 to 0. Values above -20 indicate overbought conditions; below -80 indicate oversold.
+
+```python
+df["williams_r"] = ta.williams_r(df, period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `high`, `low`, and `close` columns.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.adx` — Average Directional Index
+
+Measures the strength of a trend (not its direction). Values above 25 generally indicate a strong trend.
+
+```python
+df["adx"] = ta.adx(df, period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `high`, `low`, and `close` columns.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+### Momentum example
+
+```python
+df["rsi"] = ta.rsi(df, period=14)
+macd_line, signal_line, histogram = ta.macd(df)
+df["macd"]  = macd_line
+df["signal"] = signal_line
+k, d = ta.stochastic_oscillator(df)
+df["stoch_k"] = k
+df["stoch_d"] = d
+
+# Flag potential buy signals
+buy = (df["rsi"] < 30) & (df["macd"] > df["signal"]) & (df["stoch_k"] < 20)
+print(df[buy][["time", "close", "rsi", "macd", "stoch_k"]])
+```
+
+---
+
+## Volatility and channels
+
+### `ta.atr` — Average True Range
+
+Measures market volatility as the average of the true range over a period. Requires `high`, `low`, and `close` columns.
+
+```python
+df["atr"] = ta.atr(df, period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `high`, `low`, and `close` columns.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.bbands` — Bollinger Bands
+
+Returns three Series: the upper band, middle band (SMA), and lower band. Bands widen during high volatility and contract during low volatility.
+
+<Note>
+  Returns a **tuple of three Series** — `(upper_band, mid_band, lower_band)`.
+</Note>
+
+```python
+upper, mid, lower = ta.bbands(df, column="close", period=20, num_std_dev=2)
+df["bb_upper"] = upper
+df["bb_mid"]   = mid
+df["bb_lower"] = lower
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to compute bands around.
+</ParamField>
+<ParamField path="period" type="number" default="20">
+  Moving average window.
+</ParamField>
+<ParamField path="num_std_dev" type="number" default="2">
+  Number of standard deviations for the band width.
+</ParamField>
+
+---
+
+### `ta.kc` — Keltner Channels
+
+Volatility-based channels built around an EMA using ATR. Returns three Series: upper, mid, and lower channels.
+
+<Note>
+  Returns a **tuple of three Series** — `(upper, mid, lower)`.
+</Note>
+
+```python
+upper, mid, lower = ta.kc(df, period=20, atr_period=10, multiplier=2)
+df["kc_upper"] = upper
+df["kc_mid"]   = mid
+df["kc_lower"] = lower
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `high`, `low`, and `close` columns.
+</ParamField>
+<ParamField path="period" type="number" default="20">
+  EMA period for the middle channel.
+</ParamField>
+<ParamField path="atr_period" type="number" default="10">
+  ATR period for band width.
+</ParamField>
+<ParamField path="multiplier" type="number" default="2">
+  ATR multiplier for band distance.
+</ParamField>
+
+---
+
+## Volume indicators
+
+### `ta.obv` — On Balance Volume
+
+Cumulative volume indicator. Volume is added on up days and subtracted on down days. Requires `close` and `volume` columns.
+
+```python
+df["obv"] = ta.obv(df)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `close` and `volume` columns.
+</ParamField>
+
+---
+
+### `ta.vpt` — Volume Price Trend
+
+Similar to OBV but weights volume by the percentage price change. Requires `close` and `volume` columns.
+
+```python
+df["vpt"] = ta.vpt(df)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `close` and `volume` columns.
+</ParamField>
+
+---
+
+### `ta.vwap` — Volume-Weighted Average Price
+
+Average price weighted by volume over a rolling period. Requires `high`, `low`, `close`, and `volume` columns.
+
+```python
+df["vwap"] = ta.vwap(df, period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `high`, `low`, `close`, and `volume` columns.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Rolling window in bars.
+</ParamField>
+
+---
+
+## Trend direction
+
+### `ta.vi` — Vortex Indicator
+
+Identifies the start of a new trend and confirms an ongoing trend. Returns two Series: `VI+` (bullish movement) and `VI-` (bearish movement).
+
+<Note>
+  Returns a **tuple of two Series** — `(VI_plus, VI_minus)`.
+</Note>
+
+```python
+vi_plus, vi_minus = ta.vi(df, period=14)
+df["vi_plus"]  = vi_plus
+df["vi_minus"] = vi_minus
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `high`, `low`, and `close` columns.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
+### `ta.ichi` — Ichimoku Cloud
+
+Multi-component trend system. Returns five Series.
+
+<Note>
+  Returns a **tuple of five Series** — `(conversion_line, base_line, leading_span_a, leading_span_b, lagging_span)`.
+</Note>
+
+```python
+conversion, base, span_a, span_b, lagging = ta.ichi(df)
+df["ichi_conversion"] = conversion
+df["ichi_base"]       = base
+df["ichi_span_a"]     = span_a
+df["ichi_span_b"]     = span_b
+df["ichi_lagging"]    = lagging
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `high`, `low`, and `close` columns.
+</ParamField>
+
+---
+
+### `ta.sar` — Parabolic SAR
+
+Trailing stop-and-reverse indicator that follows price. Often used to set trailing stop-loss levels.
+
+```python
+df["sar"] = ta.sar(df, af=0.02, af_max=0.2)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `high`, `low`, and `close` columns.
+</ParamField>
+<ParamField path="af" type="number" default="0.02">
+  Initial acceleration factor.
+</ParamField>
+<ParamField path="af_max" type="number" default="0.2">
+  Maximum acceleration factor.
+</ParamField>
+
+---
+
+### `ta.fib` — Fibonacci Pivot Points
+
+Calculates pivot point levels based on the prior period's high, low, and close. Returns seven Series.
+
+<Note>
+  Returns a **tuple of seven Series** — `(PP, R1, S1, R2, S2, R3, S3)`.
+</Note>
+
+```python
+pp, r1, s1, r2, s2, r3, s3 = ta.fib(df)
+df["fib_pp"] = pp
+df["fib_r1"] = r1
+df["fib_s1"] = s1
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `high`, `low`, and `close` columns.
+</ParamField>
+
+---
+
+## Combined example
+
+The following example builds a complete indicator set on daily AAPL prices and uses `visualize.graph` to display the results.
+
+```python
+from axion import Axion, ta, visualize, utils
+
+client = Axion(api_key="your_api_key")
+df = utils.df(client.stocks.prices("AAPL", from_date="2024-01-01"))
+
+# Trend
+df["ema_21"]  = ta.ema(df, period=21)
+df["ema_50"]  = ta.ema(df, period=50)
+
+# Momentum
+df["rsi"] = ta.rsi(df, period=14)
+macd_line, signal_line, histogram = ta.macd(df)
+df["macd"]      = macd_line
+df["signal"]    = signal_line
+df["histogram"] = histogram
+
+# Volatility
+upper, mid, lower = ta.bbands(df, period=20)
+df["bb_upper"] = upper
+df["bb_lower"] = lower
+
+# Volume
+df["obv"] = ta.obv(df)
+
+# Trend direction
+df["sar"] = ta.sar(df)
+
+# Chart price with bands and SAR
+visualize.graph(
+    df,
+    x="time",
+    lines=["close", "ema_21", "ema_50", "bb_upper", "bb_lower", "sar"],
+    bars=["histogram"],
+    title="AAPL — Technical Overview"
+)
+```

@@ -1,0 +1,86 @@
+---
+title: Supply Chain
+description: Map a company's customers, suppliers, and peers within its supply chain network.
+---
+
+The `client.supply_chain` namespace reveals the business relationships between companies, enabling supply chain risk analysis and competitive intelligence.
+
+## Methods
+
+### `customers`
+
+Returns a list of companies that are known customers of the given ticker.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`).
+</ParamField>
+
+```python
+customers = client.supply_chain.customers("AAPL")
+for company in customers:
+    print(company["ticker"], company["name"], company["segment"])
+```
+
+---
+
+### `suppliers`
+
+Returns a list of companies that supply goods or services to the given ticker.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+suppliers = client.supply_chain.suppliers("AAPL")
+for company in suppliers:
+    print(company["ticker"], company["name"])
+```
+
+---
+
+### `peers`
+
+Returns a list of peer companies operating in the same industry or sector.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+peers = client.supply_chain.peers("TSLA")
+for peer in peers:
+    print(peer["ticker"], peer["name"])
+```
+
+<Tip>
+  Combine `customers()` and `suppliers()` to build a two-tier supply chain map. Use `peers()` to benchmark a company against direct competitors.
+</Tip>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+ticker = "AAPL"
+
+# Who buys from Apple?
+customers = client.supply_chain.customers(ticker)
+print(f"Customers ({len(customers)}):")
+for c in customers[:5]:
+    print(f"  {c['ticker']}: {c['name']}")
+
+# Who does Apple buy from?
+suppliers = client.supply_chain.suppliers(ticker)
+print(f"\nSuppliers ({len(suppliers)}):")
+for s in suppliers[:5]:
+    print(f"  {s['ticker']}: {s['name']}")
+
+# Who are Apple's competitors?
+peers = client.supply_chain.peers(ticker)
+print(f"\nPeers ({len(peers)}):")
+for p in peers[:5]:
+    print(f"  {p['ticker']}: {p['name']}")
+```

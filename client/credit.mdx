@@ -1,0 +1,76 @@
+---
+title: Credit
+description: Search for credit entities by name and retrieve their credit ratings.
+---
+
+The `client.credit` namespace allows you to look up credit ratings for corporations, governments, and other debt-issuing entities.
+
+## Methods
+
+### `search`
+
+Searches for credit entities by name and returns matching entities with their IDs.
+
+<ParamField path="query" type="string" required>
+  Company or entity name to search for (e.g. `"Apple"`, `"US Treasury"`).
+</ParamField>
+
+```python
+results = client.credit.search("Apple")
+for entity in results:
+    print(entity["id"], entity["name"])
+```
+
+---
+
+### `ratings`
+
+Returns credit ratings for a specific entity by its ID. Use `search()` first to obtain the entity ID.
+
+<ParamField path="entity_id" type="string" required>
+  The entity identifier returned from `search()` (e.g. `"AAPL-US"`).
+</ParamField>
+
+```python
+# First, find the entity
+results = client.credit.search("Apple")
+entity_id = results[0]["id"]
+
+# Then fetch its ratings
+ratings = client.credit.ratings(entity_id)
+for rating in ratings:
+    print(rating["agency"], rating["rating"], rating["outlook"])
+```
+
+<Note>
+  Credit ratings are typically issued by agencies such as Moody’s, S&P, and Fitch. Each may use a different rating scale (e.g. `Aaa` vs `AAA`).
+</Note>
+
+## Rating scales reference
+
+| Agency | Investment Grade | Non-Investment Grade |
+|---|---|---|
+| S&P | AAA → BBB- | BB+ → D |
+| Moody’s | Aaa → Baa3 | Ba1 → C |
+| Fitch | AAA → BBB- | BB+ → D |
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# Search for Microsoft credit entities
+entities = client.credit.search("Microsoft")
+print(f"Found {len(entities)} entities")
+
+for entity in entities:
+    print(f"  {entity['id']}: {entity['name']}")
+
+# Get ratings for the first match
+if entities:
+    ratings = client.credit.ratings(entities[0]["id"])
+    for r in ratings:
+        print(f"  {r['agency']}: {r['rating']} ({r.get('outlook', 'N/A')})")
+```

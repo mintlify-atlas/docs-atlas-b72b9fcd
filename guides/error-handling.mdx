@@ -1,0 +1,170 @@
+---
+title: "Error handling"
+description: "Understand the errors the Axion SDK raises and how to handle them gracefully."
+keywords: ["error handling", "exceptions", "http error", "timeout", "connection error", "authentication"]
+---
+
+The Axion SDK raises standard Python `Exception` objects with descriptive messages. There are four error types, each with a distinct message prefix that lets you identify and respond to failures.
+
+## Error types
+
+| Error | Message format | Typical cause |
+|-------|---------------|---------------|
+| HTTP Error | `HTTP Error {status_code}: {message}` | Server returned 4xx or 5xx |
+| Connection Error | `Connection Error: Could not connect to {base_url}` | Network unreachable or DNS failure |
+| Timeout Error | `Timeout Error: Request to {base_url} timed out` | Server took too long to respond |
+| Authentication Error | `Authentication required but no API key provided to client.` | No API key was passed to the client |
+
+All errors are `Exception` instances — not custom subclasses — so a single `except Exception` block catches all of them.
+
+## Handle errors with try/except
+
+Wrap API calls in a `try/except` block and inspect the message string to branch on specific conditions:
+
+```python
+import os
+from axion import Axion, utils as axion_utils
+
+client = Axion(api_key=os.getenv("AXION_API_KEY"))
+
+try:
+    prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+    df = axion_utils.df(prices)
+except Exception as e:
+    print(f"Request failed: {e}")
+```
+
+## Common HTTP status codes
+
+### 401 Unauthorized
+
+Your API key is missing or invalid:
+
+```python
+try:
+    prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+except Exception as e:
+    if "401" in str(e):
+        print("Invalid or missing API key. Check your credentials.")
+    else:
+        raise
+```
+
+### 404 Not found
+
+The requested resource does not exist — for example, an unknown ticker symbol:
+
+```python
+try:
+    prices = client.stocks.prices("INVALIDTICKER", from_date="2024-01-01")
+except Exception as e:
+    if "404" in str(e):
+        print("Ticker not found. Verify the symbol is correct.")
+    else:
+        raise
+```
+
+### 429 Rate limit exceeded
+
+You have sent too many requests in a short period. Back off and retry:
+
+```python
+import time
+
+def fetch_with_retry(client, ticker, retries=3, backoff=2.0):
+    for attempt in range(retries):
+        try:
+            return client.stocks.prices(ticker, from_date="2024-01-01")
+        except Exception as e:
+            if "429" in str(e):
+                wait = backoff * (attempt + 1)
+                print(f"Rate limited. Retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                raise
+    raise Exception(f"Exceeded retry limit for {ticker}")
+```
+
+## Handle each error type
+
+### Connection error
+
+```python
+try:
+    prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+except Exception as e:
+    if "Connection Error" in str(e):
+        print("Could not reach the Axion API. Check your network connection.")
+    else:
+        raise
+```
+
+### Timeout error
+
+```python
+try:
+    prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+except Exception as e:
+    if "Timeout Error" in str(e):
+        print("The request timed out. Try again or reduce the date range.")
+    else:
+        raise
+```
+
+### Authentication error
+
+```python
+try:
+    prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+except Exception as e:
+    if "Authentication required" in str(e):
+        print("No API key was provided. Initialize the client with api_key=...")
+    else:
+        raise
+```
+
+## Best practices
+
+**Always wrap API calls in try/except.** Network requests can fail for reasons outside your control.
+
+**Validate the response shape before using it.** A successful HTTP response can still return an empty list:
+
+```python
+try:
+    prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+except Exception as e:
+    print(f"Fetch failed: {e}")
+    prices = []
+
+if not prices:
+    print("No data returned for the requested range.")
+else:
+    df = axion_utils.df(prices)
+```
+
+**Log the full error message** to preserve context for debugging:
+
+```python
+import logging
+
+logging.basicConfig(level=logging.ERROR)
+
+try:
+    prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+except Exception as e:
+    logging.error("Axion API error: %s", e)
+    raise
+```
+
+<Warning>
+  Because all errors use the base `Exception` class, avoid bare `except:` clauses without re-raising or logging — they will silently swallow unexpected failures.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/guides/authentication">
+    Set up your API key correctly to avoid authentication errors.
+  </Card>
+  <Card title="Caching" icon="database" href="/guides/caching">
+    Cache responses locally so a failed request does not force a full re-fetch.
+  </Card>
+</CardGroup>

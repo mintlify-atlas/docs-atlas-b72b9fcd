@@ -1,0 +1,171 @@
+---
+title: "Working with DataFrames"
+description: "Convert Axion API responses to pandas DataFrames and manipulate them with the utils module."
+keywords: ["dataframe", "pandas", "ohlcv", "utils", "stack", "stitch", "filter", "resample"]
+---
+
+Axion API responses return plain Python lists of dicts rather than DataFrames. This keeps the SDK dependency-light and lets you work with the raw data however you like. The `utils` module provides a set of helpers that make the conversion and common manipulation tasks concise.
+
+## Convert a response to a DataFrame
+
+Use `utils.df()` to wrap any list of dicts in a pandas DataFrame:
+
+```python
+from axion import Axion, utils as axion_utils
+
+client = Axion(api_key="your_api_key_here")
+
+prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+df = axion_utils.df(prices)
+print(df.head())
+```
+
+## OHLCV column names
+
+Stock and crypto price endpoints return the following standard columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `time` | string / datetime | Trading date or timestamp |
+| `open` | float | Opening price |
+| `high` | float | Intraday high |
+| `low` | float | Intraday low |
+| `close` | float | Closing price |
+| `volume` | integer | Share volume |
+
+<Note>
+  The `time` column is returned as a string. Cast it with `pd.to_datetime(df["time"])` if you need datetime arithmetic.
+</Note>
+
+## Combine multiple DataFrames
+
+### Stack (concatenate) with `utils.stack()`
+
+Use `stack()` when you have the same schema across multiple DataFrames and want to combine them into one:
+
+```python
+from axion import utils as axion_utils
+
+tickers = ["AAPL", "MSFT", "GOOGL"]
+frames = [axion_utils.df(client.stocks.prices(t, from_date="2024-01-01")) for t in tickers]
+
+combined = axion_utils.stack(frames)
+print(combined.shape)
+```
+
+`stack()` calls `pd.concat()` under the hood. Make sure each DataFrame includes a ticker column if you need to distinguish rows later.
+
+### Join different datasets with `utils.stitch()`
+
+Use `stitch()` to inner-join multiple DataFrames on a shared column (defaults to `"time"`):
+
+```python
+prices_df = axion_utils.df(client.stocks.prices("AAPL", from_date="2024-01-01"))
+econ_df = axion_utils.df(client.macro.series("GDP"))
+
+joined = axion_utils.stitch([prices_df, econ_df], col="time")
+```
+
+This is useful when you want to align price data with economic indicators or other time series on a common date axis.
+
+## Filter rows with `utils.filter()`
+
+Keep only rows whose column value appears in a list:
+
+```python
+tickers = ["AAPL", "MSFT", "GOOGL", "AMZN"]
+frames = [axion_utils.df(client.stocks.prices(t, from_date="2024-01-01")) for t in tickers]
+
+# Add a ticker column before stacking
+for i, t in enumerate(tickers):
+    frames[i]["ticker"] = t
+
+combined = axion_utils.stack(frames)
+
+# Keep only the two tickers you care about
+filtered = axion_utils.filter(combined, "ticker", ["AAPL", "MSFT"])
+```
+
+## Slice by date range with `utils.resample()`
+
+Pass a date range as a space-separated string (`"YYYY-MM-DD YYYY-MM-DD"`) to extract a time window:
+
+```python
+df = axion_utils.df(client.stocks.prices("AAPL", from_date="2023-01-01"))
+
+# Keep only Q1 2024
+q1 = axion_utils.resample(df, "2024-01-01 2024-03-31", col="time")
+```
+
+<Info>
+  `resample()` applies strict less-than / greater-than comparisons. To include the boundary dates in your slice, adjust by one day.
+</Info>
+
+## Add percent-change columns with `utils.relativity()`
+
+Use `relativity()` to compute rolling percent changes across OHLCV columns:
+
+```python
+df = axion_utils.df(client.stocks.prices("AAPL", from_date="2024-01-01"))
+df = axion_utils.relativity(df)
+```
+
+This appends `pct_change` variants of the numeric columns, useful for normalizing multiple assets to the same scale.
+
+## Combine with technical analysis
+
+The `ta` module operates directly on DataFrames. Pass the converted DataFrame and specify which column to use:
+
+```python
+from axion import ta
+
+df["rsi"] = ta.rsi(df, column="close", period=14)
+macd_line, signal, histogram = ta.macd(df)
+df["macd"] = macd_line
+df["signal"] = signal
+```
+
+## Practical example: multi-stock analysis
+
+Fetch prices for several stocks, combine them, filter, and run an indicator:
+
+```python multi_stock.py
+import os
+from axion import Axion, ta, utils as axion_utils
+
+client = Axion(api_key=os.getenv("AXION_API_KEY"))
+
+tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]
+frames = []
+
+for ticker in tickers:
+    prices = client.stocks.prices(ticker, from_date="2024-01-01")
+    df = axion_utils.df(prices)
+    df["ticker"] = ticker
+    frames.append(df)
+
+# Concatenate all tickers into one DataFrame
+combined = axion_utils.stack(frames)
+
+# Slice to a specific quarter
+combined = axion_utils.resample(combined, "2024-01-01 2024-03-31", col="time")
+
+# Keep a subset of tickers
+subset = axion_utils.filter(combined, "ticker", ["AAPL", "NVDA"])
+
+# Compute RSI per ticker
+for ticker in ["AAPL", "NVDA"]:
+    mask = subset["ticker"] == ticker
+    subset.loc[mask, "rsi"] = ta.rsi(subset[mask], column="close", period=14)
+
+print(subset[["time", "ticker", "close", "rsi"]].tail(10))
+```
+
+<CardGroup cols={2}>
+  <Card title="Caching" icon="database" href="/guides/caching">
+    Persist expensive fetches to disk and reload them across sessions.
+  </Card>
+  <Card title="Error handling" icon="triangle-alert" href="/guides/error-handling">
+    Catch and handle API errors in your data pipelines.
+  </Card>
+</CardGroup>

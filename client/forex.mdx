@@ -1,0 +1,109 @@
+---
+title: Forex
+description: Retrieve foreign exchange pair tickers and historical exchange rate data.
+---
+
+The `client.forex` namespace provides access to currency pair data and historical exchange rates. Pairs can be filtered by country or exchange.
+
+## Methods
+
+### `tickers`
+
+Returns all available forex tickers with optional filtering.
+
+<ParamField path="country" type="string">
+  ISO country code to filter pairs by country (e.g. `"US"`, `"JP"`).
+</ParamField>
+
+<ParamField path="exchange" type="string">
+  Exchange identifier to filter pairs (e.g. `"FOREX"`).
+</ParamField>
+
+```python
+# All forex pairs
+all_pairs = client.forex.tickers()
+
+# Pairs associated with Japan
+jpy_pairs = client.forex.tickers(country="JP")
+```
+
+---
+
+### `ticker`
+
+Returns metadata for a single forex pair.
+
+<ParamField path="ticker" type="string" required>
+  The forex pair symbol (e.g. `"EURUSD"`, `"GBPJPY"`).
+</ParamField>
+
+```python
+eurusd = client.forex.ticker("EURUSD")
+print(eurusd["base"])   # EUR
+print(eurusd["quote"])  # USD
+```
+
+---
+
+### `prices`
+
+Returns historical price data for the given forex pair.
+
+<ParamField path="ticker" type="string" required>
+  The forex pair symbol.
+</ParamField>
+
+<ParamField path="from_date" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="to_date" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="frame" type="string">
+  Aggregation period. One of `daily`, `weekly`, `monthly`, `quarterly`, `yearly`. Defaults to `daily`.
+</ParamField>
+
+```python
+# Daily EUR/USD rates for 2024
+eurusd_daily = client.forex.prices(
+    "EURUSD",
+    from_date="2024-01-01",
+    to_date="2024-12-31"
+)
+
+# Monthly GBP/JPY history
+gbpjpy_monthly = client.forex.prices(
+    "GBPJPY",
+    from_date="2023-01-01",
+    to_date="2024-12-31",
+    frame="monthly"
+)
+```
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# Browse available pairs
+pairs = client.forex.tickers()
+print(f"{len(pairs)} pairs available")
+
+# Inspect a pair
+usdchf = client.forex.ticker("USDCHF")
+print(usdchf)
+
+# Weekly rates over 2 years
+rates = client.forex.prices(
+    "USDCHF",
+    from_date="2023-01-01",
+    to_date="2024-12-31",
+    frame="weekly"
+)
+for row in rates:
+    print(row["date"], row["close"])
+```

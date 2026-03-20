@@ -1,0 +1,177 @@
+---
+title: Financials
+description: Access income statement, balance sheet, cash flow, and calculated financial metrics for any ticker.
+---
+
+The `client.financials` namespace exposes individual financial statement line items as well as pre-calculated ratios and a full data snapshot.
+
+<Info>
+  All financial data methods accept an optional `periods` parameter to limit the number of reporting periods returned. Periods are returned in reverse chronological order (most recent first).
+</Info>
+
+## Common parameter
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`).
+</ParamField>
+
+<ParamField path="periods" type="integer">
+  Number of reporting periods to return. Omit to return all available periods.
+</ParamField>
+
+## Income statement
+
+### `revenue`
+
+Returns total revenue across reporting periods.
+
+```python
+revenue = client.financials.revenue("AAPL", periods=8)
+for row in revenue:
+    print(row["date"], row["value"])
+```
+
+### `net_income`
+
+Returns net income (profit after all expenses and taxes).
+
+```python
+net_income = client.financials.net_income("MSFT", periods=8)
+```
+
+## Balance sheet
+
+### `total_assets`
+
+Returns total assets across reporting periods.
+
+```python
+assets = client.financials.total_assets("GOOGL")
+```
+
+### `total_liabilities`
+
+Returns total liabilities.
+
+```python
+liabilities = client.financials.total_liabilities("GOOGL")
+```
+
+### `stockholders_equity`
+
+Returns stockholders' equity (assets minus liabilities).
+
+```python
+equity = client.financials.stockholders_equity("AAPL")
+```
+
+### `current_assets`
+
+Returns current assets (assets convertible to cash within one year).
+
+```python
+current_assets = client.financials.current_assets("TSLA")
+```
+
+### `current_liabilities`
+
+Returns current liabilities (obligations due within one year).
+
+```python
+current_liabilities = client.financials.current_liabilities("TSLA")
+```
+
+## Cash flow statement
+
+### `operating_cash_flow`
+
+Returns net cash from operating activities.
+
+```python
+ocf = client.financials.operating_cash_flow("AAPL", periods=4)
+```
+
+### `capital_expenditures`
+
+Returns capital expenditures (spending on property, plant, and equipment).
+
+```python
+capex = client.financials.capital_expenditures("AMZN")
+```
+
+### `free_cash_flow`
+
+Returns free cash flow (operating cash flow minus capital expenditures).
+
+```python
+fcf = client.financials.free_cash_flow("META", periods=8)
+```
+
+## Share counts
+
+### `shares_outstanding_basic`
+
+Returns basic shares outstanding over time.
+
+```python
+basic_shares = client.financials.shares_outstanding_basic("NVDA")
+```
+
+### `shares_outstanding_diluted`
+
+Returns diluted shares outstanding (includes options, warrants, and convertibles).
+
+```python
+diluted_shares = client.financials.shares_outstanding_diluted("NVDA")
+```
+
+## Aggregated methods
+
+### `metrics`
+
+Returns a set of calculated financial metrics and ratios derived from the financial statements, such as margins, return on equity, and debt ratios.
+
+```python
+metrics = client.financials.metrics("AAPL")
+print(metrics["grossMargin"])
+print(metrics["returnOnEquity"])
+print(metrics["debtToEquity"])
+```
+
+### `snapshot`
+
+Returns a full financial data snapshot combining the most recent values from across all financial statements.
+
+```python
+snapshot = client.financials.snapshot("AAPL")
+print(snapshot["revenue"])
+print(snapshot["netIncome"])
+print(snapshot["freeCashFlow"])
+```
+
+<Tip>
+  Use `snapshot` when you need a quick overview of a company's financials without making multiple requests. Use individual methods when you need historical time-series data.
+</Tip>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+ticker = "MSFT"
+
+# Last 4 quarters of key metrics
+revenue = client.financials.revenue(ticker, periods=4)
+net_income = client.financials.net_income(ticker, periods=4)
+fcf = client.financials.free_cash_flow(ticker, periods=4)
+
+for r, n, f in zip(revenue, net_income, fcf):
+    margin = n["value"] / r["value"] * 100
+    print(f"{r['date']}: Revenue={r['value']:,}, Net margin={margin:.1f}%, FCF={f['value']:,}")
+
+# Calculated ratios
+metrics = client.financials.metrics(ticker)
+print(f"ROE: {metrics['returnOnEquity']}")
+```

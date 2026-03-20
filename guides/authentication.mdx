@@ -1,0 +1,126 @@
+---
+title: "Authentication"
+description: "How to authenticate the Axion Python SDK with your API key."
+keywords: ["api key", "authentication", "bearer token", "environment variable", "dotenv"]
+---
+
+The Axion SDK authenticates requests using a Bearer token. Every API call that requires data access must include a valid API key. This guide walks through how to get one and how to pass it to the client securely.
+
+## Get an API key
+
+Sign in to your Axion account and visit the [API keys page](https://axionquant.com/dashboard/api-keys) to generate a key. Keep it private — treat it like a password.
+
+## Pass the key to the client
+
+<Steps>
+  <Step title="Create the client">
+    Pass your API key to the `Axion` constructor:
+
+    ```python
+    from axion import Axion
+
+    client = Axion(api_key="your_api_key_here")
+    ```
+
+    The SDK adds the key to every outgoing request as an `Authorization: Bearer <key>` header.
+
+    <Warning>
+      Never hardcode your API key in source files that you commit to version control. Use an environment variable or a `.env` file instead.
+    </Warning>
+  </Step>
+
+  <Step title="Choose a secure storage method">
+    Pick the approach that fits your workflow.
+  </Step>
+</Steps>
+
+## Recommended: environment variables
+
+<Tabs>
+  <Tab title="Environment variable">
+    Set the variable in your shell before running your script:
+
+    ```bash
+    export AXION_API_KEY="your_api_key_here"
+    ```
+
+    Then read it with `os.getenv`:
+
+    ```python
+    import os
+    from axion import Axion
+
+    client = Axion(api_key=os.getenv("AXION_API_KEY"))
+    ```
+  </Tab>
+
+  <Tab title=".env file with python-dotenv">
+    Install python-dotenv:
+
+    ```bash
+    pip install python-dotenv
+    ```
+
+    Create a `.env` file in your project root:
+
+    ```bash .env
+    AXION_API_KEY=your_api_key_here
+    ```
+
+    Add `.env` to your `.gitignore`:
+
+    ```bash .gitignore
+    .env
+    ```
+
+    Load it at the top of your script:
+
+    ```python
+    from dotenv import load_dotenv
+    import os
+    from axion import Axion
+
+    load_dotenv()
+    client = Axion(api_key=os.getenv("AXION_API_KEY"))
+    ```
+
+    <Tip>
+      `load_dotenv()` is a no-op if the `.env` file does not exist, so this pattern is safe in production environments where the variable is already set.
+    </Tip>
+  </Tab>
+</Tabs>
+
+## How authentication works internally
+
+When you pass an `api_key` to the constructor, the SDK adds it to the shared `requests.Session` headers:
+
+```python
+self.session.headers.update({"Authorization": f"Bearer {api_key}"})
+```
+
+Every subsequent request made through that session carries the header automatically. You do not need to pass the key on individual calls.
+
+## What happens without an API key
+
+If you call an endpoint that requires authentication without providing an API key, the SDK raises:
+
+```python
+Exception("Authentication required but no API key provided to client.")
+```
+
+You can construct an unauthenticated client for endpoints that do not require a key:
+
+```python
+client = Axion()  # no api_key argument
+```
+
+Attempting a protected request with this client will raise the authentication error above.
+
+<CardGroup cols={2}>
+  <Card title="Error handling" icon="triangle-alert" href="/guides/error-handling">
+    Handle authentication errors and other exceptions in your code.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Make your first authenticated API call.
+  </Card>
+</CardGroup>

@@ -1,0 +1,83 @@
+---
+title: ETFs
+description: Retrieve ETF fund details, underlying holdings, and exposure breakdowns.
+---
+
+The `client.etfs` namespace provides data on exchange-traded funds, including fund structure, constituent holdings, and sector/geography exposure.
+
+## Methods
+
+### `fund`
+
+Returns detailed fund-level information for an ETF, including expense ratio, AUM, category, and inception date.
+
+<ParamField path="ticker" type="string" required>
+  The ETF ticker symbol (e.g. `"SPY"`, `"QQQ"`, `"VTI"`).
+</ParamField>
+
+```python
+fund = client.etfs.fund("SPY")
+print(fund["longName"])       # SPDR S&P 500 ETF Trust
+print(fund["totalAssets"])    # AUM in USD
+print(fund["expenseRatio"])   # Annual expense ratio
+print(fund["category"])       # Large Blend
+```
+
+---
+
+### `holdings`
+
+Returns the list of underlying holdings in the ETF, including each holding's ticker, name, and weight.
+
+<ParamField path="ticker" type="string" required>
+  The ETF ticker symbol.
+</ParamField>
+
+```python
+holdings = client.etfs.holdings("QQQ")
+for holding in holdings[:10]:
+    print(holding["symbol"], holding["holdingName"], holding["holdingPercent"])
+```
+
+---
+
+### `exposure`
+
+Returns exposure breakdown data for an ETF, such as sector allocations, geographic exposure, or asset class weights.
+
+<ParamField path="ticker" type="string" required>
+  The ETF ticker symbol.
+</ParamField>
+
+```python
+exposure = client.etfs.exposure("VTI")
+print(exposure)
+```
+
+<Tip>
+  Combine `holdings()` and `exposure()` to get both constituent-level detail and top-down allocation views for the same fund.
+</Tip>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+etf = "QQQ"
+
+# Fund overview
+fund = client.etfs.fund(etf)
+print(f"{fund['longName']} | AUM: {fund['totalAssets']:,} | Expense: {fund['expenseRatio']}")
+
+# Top 10 holdings
+holdings = client.etfs.holdings(etf)
+print("Top 10 holdings:")
+for h in holdings[:10]:
+    print(f"  {h['symbol']:6s} {h['holdingPercent']:.2%}")
+
+# Sector exposure
+exposure = client.etfs.exposure(etf)
+print(exposure)
+```

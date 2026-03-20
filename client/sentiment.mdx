@@ -1,0 +1,103 @@
+---
+title: Sentiment
+description: Retrieve social media, news, and analyst sentiment scores for any ticker.
+---
+
+The `client.sentiment` namespace aggregates sentiment signals across three source types — social media, news coverage, and analyst opinions — and provides a combined view through the `all()` method.
+
+## Methods
+
+### `all`
+
+Returns a combined sentiment object containing social, news, and analyst sentiment data in a single response.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`).
+</ParamField>
+
+```python
+sentiment = client.sentiment.all("AAPL")
+print(sentiment["social"])
+print(sentiment["news"])
+print(sentiment["analyst"])
+```
+
+---
+
+### `social`
+
+Returns social media sentiment data, including scores derived from platforms such as Reddit, Twitter/X, and StockTwits.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+social = client.sentiment.social("TSLA")
+print(social["score"])
+print(social["positiveCount"])
+print(social["negativeCount"])
+```
+
+---
+
+### `news`
+
+Returns sentiment scores derived from financial news articles mentioning the ticker.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+news_sentiment = client.sentiment.news("NVDA")
+print(news_sentiment["score"])
+print(news_sentiment["articles"])
+```
+
+---
+
+### `analyst`
+
+Returns analyst sentiment derived from ratings, price target changes, and recommendation revisions.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+analyst = client.sentiment.analyst("MSFT")
+print(analyst["score"])
+print(analyst["strongBuy"])
+print(analyst["buy"])
+print(analyst["hold"])
+print(analyst["sell"])
+```
+
+<Tip>
+  Use `all()` to retrieve all three sentiment layers in one API call. Use the individual methods (`social`, `news`, `analyst`) when you only need one signal to reduce response payload size.
+</Tip>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+ticker = "AMZN"
+
+# Combined sentiment snapshot
+all_sentiment = client.sentiment.all(ticker)
+print("Social score:", all_sentiment["social"]["score"])
+print("News score:", all_sentiment["news"]["score"])
+print("Analyst score:", all_sentiment["analyst"]["score"])
+
+# Deep-dive into social signals
+social = client.sentiment.social(ticker)
+print(f"Positive: {social['positiveCount']}, Negative: {social['negativeCount']}")
+
+# Analyst consensus breakdown
+analyst = client.sentiment.analyst(ticker)
+print(f"Buy: {analyst['strongBuy'] + analyst['buy']}, Hold: {analyst['hold']}, Sell: {analyst['sell']}")
+```

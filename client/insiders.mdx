@@ -1,0 +1,136 @@
+---
+title: Insiders
+description: Retrieve insider holders, institutional and fund ownership, major holders breakdowns, and insider transaction history.
+---
+
+The `client.insiders` namespace provides detailed ownership data for any publicly listed ticker, covering individual insiders, institutions, funds, and aggregate ownership summaries.
+
+## Methods
+
+### `individuals`
+
+Returns a list of individual insider holders (officers and directors) and their share counts.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`).
+</ParamField>
+
+```python
+individuals = client.insiders.individuals("AAPL")
+for holder in individuals:
+    print(holder["name"], holder["position"], holder["shares"])
+```
+
+---
+
+### `institutions`
+
+Returns institutional ownership data including holder names, share counts, and percentage held.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+institutions = client.insiders.institutions("MSFT")
+for inst in institutions[:10]:
+    print(inst["organization"], inst["pctHeld"])
+```
+
+---
+
+### `funds`
+
+Returns mutual fund and ETF ownership data.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+funds = client.insiders.funds("NVDA")
+for fund in funds[:10]:
+    print(fund["organization"], fund["shares"])
+```
+
+---
+
+### `ownership`
+
+Returns a high-level major holders breakdown, including percentages held by insiders, institutions, and the public float.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+ownership = client.insiders.ownership("TSLA")
+print(ownership["insidersPercentHeld"])
+print(ownership["institutionsPercentHeld"])
+print(ownership["institutionsFloatPercentHeld"])
+```
+
+---
+
+### `transactions`
+
+Returns a history of insider buy/sell transactions filed with the SEC.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+transactions = client.insiders.transactions("AAPL")
+for tx in transactions:
+    print(tx["filerName"], tx["transactionText"], tx["shares"], tx["value"])
+```
+
+---
+
+### `activity`
+
+Returns net share purchase activity, summarizing whether insiders are net buyers or sellers over recent periods.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+activity = client.insiders.activity("AMZN")
+print(activity["netSharesPurchasedOverPeriod"])
+print(activity["netPercentInsiderShares"])
+```
+
+<Note>
+  Insider transaction data is sourced from SEC Form 4 filings. There may be a short delay between a filing event and its availability through the API.
+</Note>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+ticker = "GOOGL"
+
+# High-level ownership split
+ownership = client.insiders.ownership(ticker)
+print(f"Insider %: {ownership['insidersPercentHeld']}")
+print(f"Institution %: {ownership['institutionsPercentHeld']}")
+
+# Top 5 institutional holders
+institutions = client.insiders.institutions(ticker)
+for inst in institutions[:5]:
+    print(inst["organization"], inst["pctHeld"])
+
+# Recent insider trades
+transactions = client.insiders.transactions(ticker)
+for tx in transactions[:5]:
+    print(tx["filerName"], tx["transactionText"], tx["value"])
+
+# Net buy/sell summary
+activity = client.insiders.activity(ticker)
+print(activity)
+```

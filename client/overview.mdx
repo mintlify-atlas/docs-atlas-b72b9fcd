@@ -1,0 +1,113 @@
+---
+title: API Client Overview
+description: Explore all namespaces available in the Axion Python SDK client.
+---
+
+The `Axion` client is the single entry point to every API namespace in the SDK. Instantiate it once with your API key and access any data domain through its attributes.
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+```
+
+<Note>
+  Your API key is sent as a `Bearer` token in the `Authorization` header on every authenticated request. Keep it secure and never commit it to source control.
+</Note>
+
+## Available namespaces
+
+<CardGroup cols={2}>
+  <Card title="Stocks" icon="chart-line" href="/client/stocks">
+    Tickers, metadata, and historical price data for equities.
+  </Card>
+  <Card title="Crypto" icon="bitcoin" href="/client/crypto">
+    Cryptocurrency tickers and OHLCV price history for coins and tokens.
+  </Card>
+  <Card title="Forex" icon="money-bill-transfer" href="/client/forex">
+    Currency pair tickers and historical exchange rate data.
+  </Card>
+  <Card title="Futures" icon="arrows-rotate" href="/client/futures">
+    Futures contract tickers and historical price series.
+  </Card>
+  <Card title="Indices" icon="list-ol" href="/client/indices">
+    Market index tickers and historical index price data.
+  </Card>
+  <Card title="Profiles" icon="building" href="/client/profiles">
+    Company profiles, statistics, analyst recommendations, and calendars.
+  </Card>
+  <Card title="Earnings" icon="file-invoice-dollar" href="/client/earnings">
+    Historical earnings, trend estimates, and quarterly reports.
+  </Card>
+  <Card title="Financials" icon="table" href="/client/financials">
+    Income statement, balance sheet, cash flow metrics, and snapshots.
+  </Card>
+  <Card title="Insiders" icon="user-tie" href="/client/insiders">
+    Insider holders, institutional ownership, and insider transactions.
+  </Card>
+  <Card title="Filings" icon="folder-open" href="/client/filings">
+    SEC filings search and retrieval by form type.
+  </Card>
+  <Card title="Econ" icon="globe" href="/client/econ">
+    Economic data series and the economic event calendar.
+  </Card>
+  <Card title="ETFs" icon="layer-group" href="/client/etfs">
+    ETF fund details, holdings, and exposure breakdowns.
+  </Card>
+  <Card title="News" icon="newspaper" href="/client/news">
+    General, company, country, and category news articles.
+  </Card>
+  <Card title="Sentiment" icon="face-smile" href="/client/sentiment">
+    Social, news, and analyst sentiment scores for tickers.
+  </Card>
+  <Card title="ESG" icon="leaf" href="/client/esg">
+    Environmental, social, and governance scores.
+  </Card>
+  <Card title="Credit" icon="credit-card" href="/client/credit">
+    Credit entity search and ratings lookup.
+  </Card>
+  <Card title="Supply Chain" icon="truck" href="/client/supply-chain">
+    Customers, suppliers, and peer companies for a ticker.
+  </Card>
+  <Card title="Web Traffic" icon="chart-bar" href="/client/web-traffic">
+    Website traffic analytics for public companies.
+  </Card>
+</CardGroup>
+
+## Namespace quick reference
+
+| Attribute | Class | Description |
+|---|---|---|
+| `client.stocks` | `StocksAPI` | Equity tickers and prices |
+| `client.crypto` | `CryptoAPI` | Crypto tickers and prices |
+| `client.forex` | `ForexAPI` | Forex pairs and prices |
+| `client.futures` | `FuturesAPI` | Futures contracts and prices |
+| `client.indices` | `IndicesAPI` | Market indices and prices |
+| `client.profiles` | `ProfilesAPI` | Company profiles and statistics |
+| `client.earnings` | `EarningsAPI` | Earnings history and estimates |
+| `client.financials` | `FinancialsAPI` | Financial statements and metrics |
+| `client.insiders` | `InsidersAPI` | Ownership and insider activity |
+| `client.filings` | `FilingsAPI` | SEC filings |
+| `client.econ` | `EconAPI` | Economic data and calendar |
+| `client.etfs` | `ETFAPI` | ETF fund data |
+| `client.news` | `NewsAPI` | News articles |
+| `client.sentiment` | `SentimentAPI` | Sentiment analysis |
+| `client.esg` | `ESGAPI` | ESG scores |
+| `client.credit` | `CreditAPI` | Credit ratings |
+| `client.supply_chain` | `SupplyChainAPI` | Supply chain relationships |
+| `client.web_traffic` | `WebTrafficAPI` | Web traffic analytics |
+
+## Error handling
+
+All methods raise a plain `Exception` with a descriptive message on failure. The message includes the HTTP status code and the API error message where available.
+
+```python
+try:
+    data = client.stocks.ticker("INVALID")
+except Exception as e:
+    print(e)  # HTTP Error 404: Ticker not found
+```
+
+<Tip>
+  Wrap API calls in `try/except` blocks in production code. Network errors, timeouts, and HTTP errors are all surfaced as `Exception` instances.
+</Tip>

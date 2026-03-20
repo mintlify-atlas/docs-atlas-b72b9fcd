@@ -1,0 +1,119 @@
+---
+title: Econ
+description: Search economic data series, retrieve observations, and browse the economic event calendar.
+---
+
+The `client.econ` namespace provides access to macroeconomic data series (similar to FRED) and a filterable economic event calendar covering releases worldwide.
+
+## Methods
+
+### `search`
+
+Searches for economic data series by keyword and returns matching series metadata.
+
+<ParamField path="query" type="string" required>
+  Search keyword or phrase (e.g. `"GDP"`, `"unemployment rate"`, `"CPI"`)
+</ParamField>
+
+```python
+results = client.econ.search("consumer price index")
+for series in results:
+    print(series["id"], series["title"])
+```
+
+---
+
+### `dataset`
+
+Returns all historical observations for a specific economic series identified by its series ID.
+
+<ParamField path="series_id" type="string" required>
+  The unique series identifier returned from `search()` (e.g. `"CPIAUCSL"`).
+</ParamField>
+
+```python
+# Fetch CPI observations
+cpi = client.econ.dataset("CPIAUCSL")
+for obs in cpi[-12:]:  # Last 12 observations
+    print(obs["date"], obs["value"])
+```
+
+---
+
+### `calendar`
+
+Returns scheduled economic events and data releases. All parameters are optional — omitting them returns all upcoming events.
+
+<ParamField path="from_date" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="to_date" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="country" type="string">
+  ISO country code to filter events by country (e.g. `"US"`, `"EU"`, `"JP"`).
+</ParamField>
+
+<ParamField path="min_importance" type="integer">
+  Minimum importance level. Typically `1` (low), `2` (medium), or `3` (high). Events with importance below this threshold are excluded.
+</ParamField>
+
+<ParamField path="currency" type="string">
+  Currency code to filter events (e.g. `"USD"`, `"EUR"`).
+</ParamField>
+
+<ParamField path="category" type="string">
+  Category name to filter events (e.g. `"inflation"`, `"employment"`).
+</ParamField>
+
+```python
+# All high-importance US events this week
+events = client.econ.calendar(
+    from_date="2025-03-17",
+    to_date="2025-03-21",
+    country="US",
+    min_importance=3
+)
+for event in events:
+    print(event["date"], event["event"], event["actual"], event["forecast"])
+
+# All EUR-denominated events
+eur_events = client.econ.calendar(currency="EUR")
+
+# Inflation-category events globally
+inflation = client.econ.calendar(category="inflation")
+```
+
+<Note>
+  The `min_importance` parameter uses integer values typically ranging from 1 to 3. Use `3` to retrieve only market-moving high-impact events such as NFP, CPI, or Fed rate decisions.
+</Note>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# Find GDP-related series
+results = client.econ.search("real GDP")
+for s in results[:3]:
+    print(s["id"], s["title"])
+
+# Fetch the series data
+gdp = client.econ.dataset(results[0]["id"])
+print(f"Series has {len(gdp)} observations")
+print("Latest:", gdp[-1])
+
+# Upcoming high-importance US events
+events = client.econ.calendar(
+    from_date="2025-03-20",
+    to_date="2025-03-27",
+    country="US",
+    min_importance=2
+)
+for e in events:
+    print(e["event"], e["date"], e["importance"])
+```

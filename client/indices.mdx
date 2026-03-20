@@ -1,0 +1,107 @@
+---
+title: Indices
+description: Retrieve market index tickers and historical index price data.
+---
+
+The `client.indices` namespace covers major and regional market indices worldwide.
+
+## Methods
+
+### `tickers`
+
+Returns all available index tickers, optionally filtered by exchange.
+
+<ParamField path="exchange" type="string">
+  Exchange or market identifier to filter indices (e.g. `"NYSE"`, `"LSE"`).
+</ParamField>
+
+```python
+# All indices
+all_indices = client.indices.tickers()
+
+# NYSE-listed indices
+nyse_indices = client.indices.tickers(exchange="NYSE")
+```
+
+---
+
+### `ticker`
+
+Returns metadata for a single index.
+
+<ParamField path="ticker" type="string" required>
+  The index symbol (e.g. `"^GSPC"`, `"^DJI"`, `"^IXIC"`).
+</ParamField>
+
+```python
+sp500 = client.indices.ticker("^GSPC")
+print(sp500["name"])  # S&P 500
+```
+
+---
+
+### `prices`
+
+Returns historical price data for the given index.
+
+<ParamField path="ticker" type="string" required>
+  The index symbol.
+</ParamField>
+
+<ParamField path="from_date" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="to_date" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="frame" type="string">
+  Aggregation period. One of `daily`, `weekly`, `monthly`, `quarterly`, `yearly`. Defaults to `daily`.
+</ParamField>
+
+```python
+# Daily S&P 500 prices for 2024
+sp500_prices = client.indices.prices(
+    "^GSPC",
+    from_date="2024-01-01",
+    to_date="2024-12-31"
+)
+
+# Yearly Dow Jones history
+dji_yearly = client.indices.prices(
+    "^DJI",
+    from_date="2015-01-01",
+    to_date="2024-12-31",
+    frame="yearly"
+)
+```
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# Browse all available indices
+indices = client.indices.tickers()
+
+# Metadata for NASDAQ Composite
+nasdaq = client.indices.ticker("^IXIC")
+print(nasdaq["name"])  # NASDAQ Composite
+
+# Monthly price history
+prices = client.indices.prices(
+    "^IXIC",
+    from_date="2020-01-01",
+    to_date="2024-12-31",
+    frame="monthly"
+)
+for row in prices:
+    print(row["date"], row["close"])
+```
+
+<Tip>
+  Index symbols often begin with a caret (`^`). Check the `tickers()` list for the exact symbol format used by the API.
+</Tip>

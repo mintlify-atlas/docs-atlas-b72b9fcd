@@ -1,0 +1,566 @@
+---
+title: "Utils"
+description: "Complete reference for the `utils` module — date helpers, DataFrame manipulation, analysis utilities, concurrency, and caching."
+---
+
+The `utils` module provides helper functions for date parsing, DataFrame manipulation, data analysis, threaded execution, and local caching. It is designed to complement the API client and reduce boilerplate in notebook workflows.
+
+```python
+from axion import utils
+```
+
+---
+
+## Date helpers
+
+### `utils.d` — Natural language to date string
+
+Converts a natural language date expression to a `"YYYY-MM-DD"` string.
+
+```python
+utils.d("1 month ago")   # "2024-01-01"
+utils.d("3 weeks ago")   # "2024-01-10"
+utils.d("1 year ago")    # "2023-02-01"
+```
+
+<ParamField path="date_string" type="string" required>
+  Natural language date expression (e.g., `"1 month ago"`, `"3 weeks ago"`).
+</ParamField>
+
+---
+
+### `utils.to_timestamp` — Date string to Unix timestamp
+
+Converts a `"YYYY-MM-DD"` date string to a Unix timestamp integer.
+
+```python
+ts = utils.to_timestamp("2024-01-01")  # 1704067200
+```
+
+<ParamField path="date" type="string" required>
+  Date string in `"YYYY-MM-DD"` format.
+</ParamField>
+
+---
+
+### `utils.nearest_day` — Nearest market open day
+
+Returns the nearest market open day for a given date. Skips weekends. Pass `force=True` to always round forward.
+
+```python
+utils.nearest_day("2024-03-02")           # skips Saturday -> "2024-03-01"
+utils.nearest_day("2024-03-02", force=True)  # forces forward -> "2024-03-04"
+```
+
+<ParamField path="date_str" type="string" required>
+  Date string in `"YYYY-MM-DD"` format.
+</ParamField>
+<ParamField path="force" type="boolean" default="false">
+  When `True`, always rounds to the next open day rather than the nearest.
+</ParamField>
+
+---
+
+### Date shorthand constants
+
+Convenience constants for common relative dates and time-scale abbreviations. All date constants are `"YYYY-MM-DD"` strings computed at import time.
+
+| Constant | Type | Value |
+|---|---|---|
+| `utils.today` | string | Current date |
+| `utils.yesterday` | string | Yesterday |
+| `utils.weekago` | string | 7 days ago |
+| `utils.monthago` | string | 30 days ago |
+| `utils.yearago` | string | 365 days ago |
+| `utils.yearfrom` | string | 365 days from now |
+| `utils.d` | string | `"D"` (daily) |
+| `utils.w` | string | `"W"` (weekly) |
+| `utils.m` | string | `"M"` (monthly) |
+| `utils.y` | string | `"Y"` (yearly) |
+
+```python
+prices = client.stocks.prices("AAPL", from_date=utils.yearago, to_date=utils.today)
+```
+
+<Warning>
+  `utils.d` is overloaded — it is both the `d()` function and the `"D"` daily scale constant. In most contexts Python resolves this to the function. Use `utils.d` as a string only in assignments like `scale=utils.d`.
+</Warning>
+
+---
+
+## DataFrame helpers
+
+### `utils.df` — Create DataFrame from list of dicts
+
+Converts an API response (list of dicts) to a pandas DataFrame. This is the standard way to convert Axion API responses.
+
+```python
+prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+df = utils.df(prices)
+```
+
+<ParamField path="items" type="list" required>
+  List of dicts, typically an API response.
+</ParamField>
+
+---
+
+### `utils.pds` — Convert 2D list of dicts to list of DataFrames
+
+Converts a 2D list (list of lists of dicts) into a list of DataFrames. Useful when an API returns multiple grouped results.
+
+```python
+results = [[{...}, {...}], [{...}, {...}]]
+dataframes = utils.pds(results)
+```
+
+<ParamField path="list_of_lists" type="list" required>
+  2D list where each inner list is a list of dicts.
+</ParamField>
+
+---
+
+### `utils.stack` — Concatenate DataFrames vertically
+
+Concatenates a list of DataFrames vertically (`pd.concat`). Use when combining results for the same ticker across different date ranges, or multiple tickers with identical schemas.
+
+```python
+df_all = utils.stack([df_q1, df_q2, df_q3, df_q4])
+```
+
+<ParamField path="dfs" type="DataFrame[]" required>
+  List of DataFrames to concatenate.
+</ParamField>
+
+---
+
+### `utils.stitch` — Inner-join DataFrames on a shared column
+
+Inner-joins multiple DataFrames on a shared column. Use when aligning datasets that share a common key (e.g., `time`) but may have different date ranges.
+
+```python
+# Align price and earnings DataFrames on the time column
+df = utils.stitch([df_prices, df_earnings], col="time")
+```
+
+<ParamField path="dfs" type="DataFrame[]" required>
+  List of DataFrames to join.
+</ParamField>
+<ParamField path="col" type="string" default="time">
+  Column name to join on.
+</ParamField>
+
+---
+
+### `utils.snap` — Merge DataFrames side-by-side with rename support
+
+Merges same-type DataFrames side-by-side on a shared column. Supports column renaming to distinguish overlapping column names from different sources.
+
+```python
+# Merge AAPL and MSFT close prices side by side, renaming columns by ticker
+df = utils.snap(
+    [df_aapl, df_msft],
+    names=["AAPL", "MSFT"],
+    overwrite=["close", "volume"],
+    col="time"
+)
+# Result columns: time, AAPL_close, AAPL_volume, MSFT_close, MSFT_volume
+```
+
+<ParamField path="dfs" type="DataFrame[]" required>
+  List of DataFrames to merge.
+</ParamField>
+<ParamField path="names" type="string[]" default="[]">
+  Name prefixes for each DataFrame's columns (matched by position).
+</ParamField>
+<ParamField path="overwrite" type="string[]" default="[]">
+  Column names to rename using the `names` prefixes.
+</ParamField>
+<ParamField path="col" type="string" default="time">
+  Shared column to merge on.
+</ParamField>
+
+---
+
+### `utils.filter` — Filter DataFrame rows by column values
+
+Filters rows where a column's value is in a provided list.
+
+```python
+df_tech = utils.filter(df, col="sector", items=["Technology", "Communication Services"])
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="col" type="string" required>
+  Column name to filter on.
+</ParamField>
+<ParamField path="items" type="list" required>
+  List of values to keep.
+</ParamField>
+
+---
+
+### `utils.resample` — Date-range filter
+
+Filters a DataFrame to rows within a date range string. The range is expressed as a space-separated `"start end"` string.
+
+```python
+df_2024 = utils.resample(df, "2024-01-01 2024-12-31")
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame with a `time` column.
+</ParamField>
+<ParamField path="range_str" type="string" required>
+  Date range as `"YYYY-MM-DD YYYY-MM-DD"` (start and end separated by a space).
+</ParamField>
+
+---
+
+### `utils.dedup` — Remove duplicates from a list
+
+```python
+clean = utils.dedup(["AAPL", "MSFT", "AAPL", "GOOG"])  # ["AAPL", "MSFT", "GOOG"]
+```
+
+<ParamField path="lst" type="list" required>
+  List to deduplicate. Order is preserved.
+</ParamField>
+
+---
+
+### `utils.simmer` — Flatten a 2D list
+
+Flattens a 2D list into a 1D list.
+
+```python
+flat = utils.simmer([["AAPL", "MSFT"], ["GOOG", "AMZN"]])  # ["AAPL", "MSFT", "GOOG", "AMZN"]
+```
+
+<ParamField path="arr" type="list" required>
+  2D list to flatten.
+</ParamField>
+
+---
+
+## Analysis helpers
+
+### `utils.relativity` — Add percentage change columns
+
+Adds `pct_change` variants of specified columns to the DataFrame in-place.
+
+```python
+df = utils.relativity(df, cols=["close", "volume"])
+# Adds columns: close_pct, volume_pct
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="cols" type="string[]" required>
+  Column names to compute percentage changes for.
+</ParamField>
+
+---
+
+### `utils.indexed` — Composite index from multiple tickers
+
+Averages a dict of `ticker -> DataFrame` price data into a single composite DataFrame. Useful for building equal-weighted basket indices.
+
+```python
+prices = {
+    "AAPL": df_aapl,
+    "MSFT": df_msft,
+    "GOOG": df_goog,
+}
+basket = utils.indexed(prices)
+```
+
+<ParamField path="prices" type="dict" required>
+  Dict mapping ticker strings to price DataFrames.
+</ParamField>
+
+---
+
+### `utils.composite` — Combine and average financials DataFrames
+
+Combines multiple financials or facts DataFrames and averages overlapping values.
+
+```python
+composite_df = utils.composite([df_aapl_fins, df_msft_fins], joins=["fact", "label"], col="value")
+```
+
+<ParamField path="dfs" type="DataFrame[]" required>
+  List of DataFrames to combine.
+</ParamField>
+<ParamField path="joins" type="string[]" default="['fact', 'label']">
+  Column names to join on before averaging.
+</ParamField>
+<ParamField path="col" type="string" default="value">
+  Numeric column to average across DataFrames.
+</ParamField>
+
+---
+
+### `utils.contrast` — Reshape for side-by-side graphing
+
+Reshapes DataFrames so they can be plotted side-by-side in a grouped chart.
+
+```python
+df_chart = utils.contrast([df_aapl, df_msft], joins=["fact", "label"])
+visualize.bar(df_chart, x="label", y="value")
+```
+
+<ParamField path="dfs" type="DataFrame[]" required>
+  List of DataFrames to reshape.
+</ParamField>
+<ParamField path="joins" type="string[]" required>
+  Column names used as the reshape key.
+</ParamField>
+
+---
+
+### `utils.compare` — Cross-DataFrame percentage diff comparison
+
+Computes percentage differences between matching values across DataFrames.
+
+```python
+diff_df = utils.compare([df_aapl, df_msft], joins=["fact", "label"])
+```
+
+<ParamField path="dfs" type="DataFrame[]" required>
+  List of DataFrames to compare.
+</ParamField>
+<ParamField path="joins" type="string[]" required>
+  Column names to align before computing diffs.
+</ParamField>
+
+---
+
+### `utils.gainers` — Top gainers from a price dict
+
+Returns a DataFrame of the top gaining tickers within a specified time frame.
+
+```python
+top = utils.gainers(prices, frame="2024-01-01 2024-06-30", col="close", limit=20)
+```
+
+<ParamField path="prices" type="dict" required>
+  Dict mapping ticker strings to price DataFrames.
+</ParamField>
+<ParamField path="frame" type="string" required>
+  Date range as `"YYYY-MM-DD YYYY-MM-DD"`.
+</ParamField>
+<ParamField path="col" type="string" default="close">
+  Column to measure gain from.
+</ParamField>
+<ParamField path="limit" type="number" default="500">
+  Maximum number of results to return.
+</ParamField>
+<ParamField path="relative" type="boolean" default="true">
+  Return percentage gain when `True`; absolute when `False`.
+</ParamField>
+<ParamField path="reverse" type="boolean" default="true">
+  Sort descending (highest first) when `True`.
+</ParamField>
+
+---
+
+### `utils.losers` — Top losers from a price dict
+
+Returns a DataFrame of the top losing tickers within a specified time frame.
+
+```python
+bottom = utils.losers(prices, frame="2024-01-01 2024-06-30", col="close", limit=20)
+```
+
+<ParamField path="prices" type="dict" required>
+  Dict mapping ticker strings to price DataFrames.
+</ParamField>
+<ParamField path="frame" type="string" required>
+  Date range as `"YYYY-MM-DD YYYY-MM-DD"`.
+</ParamField>
+<ParamField path="col" type="string" default="close">
+  Column to measure loss from.
+</ParamField>
+<ParamField path="relative" type="boolean" default="true">
+  Return percentage loss when `True`; absolute when `False`.
+</ParamField>
+<ParamField path="limit" type="number" default="500">
+  Maximum number of results to return.
+</ParamField>
+
+---
+
+### `utils.overlap` — Intersection of column values across DataFrames
+
+Returns values that appear in the specified column in every DataFrame.
+
+```python
+common_tickers = utils.overlap([df_sp500, df_nasdaq], col="symbol")
+```
+
+<ParamField path="dfs" type="DataFrame[]" required>
+  List of DataFrames to find overlap across.
+</ParamField>
+<ParamField path="col" type="string" required>
+  Column name to find intersection values for.
+</ParamField>
+
+---
+
+### `utils.difference` — Non-overlapping values across DataFrames
+
+Returns values that do not appear in all DataFrames — the symmetric difference.
+
+```python
+unique_tickers = utils.difference([df_sp500, df_nasdaq], col="symbol")
+```
+
+<ParamField path="dfs" type="DataFrame[]" required>
+  List of DataFrames to diff.
+</ParamField>
+<ParamField path="col" type="string" required>
+  Column name to find non-overlapping values for.
+</ParamField>
+
+---
+
+## Concurrency
+
+### `utils.work` — Threaded execution with progress bar
+
+Runs a callback function for each row in a DataFrame using a thread pool, collecting results into a dict. Displays a `tqdm` progress bar. The callback receives a single DataFrame row and must return a `(key, value)` tuple.
+
+```python
+def fetch_earnings(row):
+    ticker = row["symbol"]
+    data = client.earnings.history(ticker)
+    return (ticker, utils.df(data))
+
+results = utils.work(df_tickers, callback=fetch_earnings, ref="symbol")
+# results is a dict: {"AAPL": df_aapl_earnings, "MSFT": df_msft_earnings, ...}
+```
+
+<ParamField path="df" type="DataFrame" required>
+  DataFrame whose rows are iterated over.
+</ParamField>
+<ParamField path="callback" type="callable" required>
+  Function called for each row. Receives a row (Series-like) and must return a `(key, value)` tuple.
+</ParamField>
+<ParamField path="ref" type="string" required>
+  Column name used as the dict key in the output. Typically a ticker or identifier column.
+</ParamField>
+
+<Tip>
+  `utils.work` is the recommended way to fetch data for a large list of tickers without hitting sequential request bottlenecks. Combine it with `utils.cache` to avoid re-fetching on subsequent notebook runs.
+</Tip>
+
+---
+
+## Caching and persistence
+
+### `utils.cache` — Load or compute and cache
+
+Loads a previously cached object from `.axion_cache/{id}.pkl` if it exists. If not, calls `fn()`, saves the result to disk, and returns it.
+
+```python
+# Fetch prices once and cache; reload on subsequent runs
+prices = utils.cache("aapl_prices_2024", lambda: client.stocks.prices("AAPL", from_date="2024-01-01"))
+```
+
+<ParamField path="id" type="string" required>
+  Cache key. Used as the filename: `.axion_cache/{id}.pkl`.
+</ParamField>
+<ParamField path="fn" type="callable" required>
+  Zero-argument function to call if the cache is missing. Its return value is saved and returned.
+</ParamField>
+
+---
+
+### `utils.save` — Save object to cache
+
+Manually saves any Python object to `.axion_cache/{id}.pkl`.
+
+```python
+utils.save("my_signals", signals_df)
+```
+
+<ParamField path="id" type="string" required>
+  Cache key.
+</ParamField>
+<ParamField path="obj" type="any" required>
+  Python object to persist.
+</ParamField>
+
+---
+
+### `utils.read` — Read object from cache
+
+Loads a previously saved object from `.axion_cache/{id}.pkl`.
+
+```python
+signals_df = utils.read("my_signals")
+```
+
+<ParamField path="id" type="string" required>
+  Cache key to load.
+</ParamField>
+
+---
+
+### `utils.scribe` — Cache + work combined
+
+Combines `utils.cache` and `utils.work` in one call. If the cache exists, it is returned directly. Otherwise, `utils.work` is executed with `cb` as the callback and the result is saved to cache.
+
+```python
+earnings_map = utils.scribe(
+    df_tickers,
+    id="earnings_map",
+    cb=fetch_earnings
+)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  DataFrame to iterate over (passed to `utils.work`).
+</ParamField>
+<ParamField path="id" type="string" required>
+  Cache key.
+</ParamField>
+<ParamField path="cb" type="callable" required>
+  Callback function passed to `utils.work`. Receives a row, returns `(key, value)`.
+</ParamField>
+
+---
+
+## Full workflow example
+
+This example fetches prices for a list of S&P 500 tickers, identifies top gainers and losers for the year, and caches the results.
+
+```python
+from axion import Axion, utils, visualize
+
+client = Axion(api_key="your_api_key")
+
+# Load ticker list
+tickers_data = client.stocks.tickers()
+df_tickers = utils.df(tickers_data)
+
+# Fetch prices for all tickers with caching
+def fetch_price(row):
+    ticker = row["symbol"]
+    data = client.stocks.prices(ticker, from_date=utils.yearago, to_date=utils.today)
+    return (ticker, utils.df(data))
+
+prices = utils.scribe(df_tickers, id="prices_ytd", cb=fetch_price)
+
+# Find top 20 gainers and losers
+gainers = utils.gainers(prices, frame=f"{utils.yearago} {utils.today}", limit=20)
+losers  = utils.losers(prices,  frame=f"{utils.yearago} {utils.today}", limit=20)
+
+# Visualize
+visualize.barh(gainers, x="return", y="symbol")
+visualize.barh(losers,  x="return", y="symbol")
+```

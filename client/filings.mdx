@@ -1,0 +1,141 @@
+---
+title: Filings
+description: Search and retrieve SEC filings by company, form type, and reporting period.
+---
+
+The `client.filings` namespace provides access to SEC regulatory filings including 10-K annual reports, 10-Q quarterly reports, 8-K current reports, and many other form types.
+
+## Methods
+
+### `filings`
+
+Returns recent SEC filings for a company, with optional filters for form type and result count.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`).
+</ParamField>
+
+<ParamField path="limit" type="integer">
+  Maximum number of filings to return.
+</ParamField>
+
+<ParamField path="form" type="string">
+  SEC form type to filter by (e.g. `"10-K"`, `"10-Q"`, `"8-K"`).
+</ParamField>
+
+```python
+# Most recent 10 filings
+recent = client.filings.filings("AAPL", limit=10)
+
+# Only 10-K annual reports
+annual_reports = client.filings.filings("MSFT", form="10-K")
+
+for filing in annual_reports:
+    print(filing["date"], filing["form"], filing["title"])
+```
+
+---
+
+### `forms`
+
+Returns filings of a specific form type for a company, with optional year and quarter filtering.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="form_type" type="string" required>
+  SEC form type (e.g. `"10-Q"`, `"10-K"`, `"DEF 14A"`).
+</ParamField>
+
+<ParamField path="year" type="string">
+  Four-digit fiscal year string (e.g. `"2024"`).
+</ParamField>
+
+<ParamField path="quarter" type="string">
+  Fiscal quarter: `"1"`, `"2"`, `"3"`, or `"4"`.
+</ParamField>
+
+<ParamField path="limit" type="integer">
+  Maximum number of results to return.
+</ParamField>
+
+```python
+# All 10-Q filings for Apple in 2024
+q_filings = client.filings.forms("AAPL", form_type="10-Q", year="2024")
+
+# Specific Q3 2024 10-Q
+q3 = client.filings.forms("AAPL", form_type="10-Q", year="2024", quarter="3", limit=1)
+print(q3[0]["url"])
+```
+
+---
+
+### `desc_forms`
+
+Returns a list of all supported SEC form types with descriptions. No parameters required.
+
+```python
+form_types = client.filings.desc_forms()
+for form in form_types:
+    print(form["form"], form["description"])
+```
+
+<Tip>
+  Call `desc_forms()` to discover all supported form type strings before using them as filters in `filings()` or `forms()`.
+</Tip>
+
+---
+
+### `search`
+
+Searches across all companies' filings for a given reporting year and quarter, with optional form type and ticker filters.
+
+<ParamField path="year" type="string" required>
+  Four-digit reporting year (e.g. `"2024"`).
+</ParamField>
+
+<ParamField path="quarter" type="string" required>
+  Reporting quarter: `"1"`, `"2"`, `"3"`, or `"4"`.
+</ParamField>
+
+<ParamField path="form" type="string">
+  Filter by SEC form type (e.g. `"10-K"`).
+</ParamField>
+
+<ParamField path="ticker" type="string">
+  Filter by specific ticker symbol.
+</ParamField>
+
+```python
+# All 10-K filings from Q4 2023
+annual_search = client.filings.search(year="2023", quarter="4", form="10-K")
+
+# All Q2 2024 filings for Tesla
+tesla_q2 = client.filings.search(year="2024", quarter="2", ticker="TSLA")
+```
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# See available form types
+forms = client.filings.desc_forms()
+print({f["form"]: f["description"] for f in forms[:5]})
+
+# Latest 5 filings for Google
+recent = client.filings.filings("GOOGL", limit=5)
+for f in recent:
+    print(f["date"], f["form"], f["title"])
+
+# Retrieve all 10-K filings for Microsoft
+annual = client.filings.forms("MSFT", form_type="10-K")
+print(f"Found {len(annual)} annual reports")
+
+# Search all S-1 filings in Q1 2024
+ipos = client.filings.search(year="2024", quarter="1", form="S-1")
+print(f"{len(ipos)} S-1 filings in Q1 2024")
+```

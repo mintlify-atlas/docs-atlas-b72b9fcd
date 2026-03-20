@@ -1,0 +1,67 @@
+---
+title: "Introduction"
+description: "An overview of the Axion Python SDK — what it is, how it's structured, and when to use it."
+---
+
+The Axion Python SDK (`axionquant-sdk`) is a Python client for the [Axion](https://axionquant.com) financial data platform. It gives quantitative researchers, data scientists, and developers programmatic access to market data, fundamentals, sentiment, and alternative data — all in a pandas-friendly format.
+
+## Who this is for
+
+- **Quant researchers** building factor models, backtests, or alpha signals in Jupyter notebooks
+- **Data engineers** fetching financial data for downstream pipelines
+- **Python developers** integrating market data into applications
+
+## SDK structure
+
+The SDK is organized into five top-level imports:
+
+| Module | Purpose |
+|--------|---------|
+| `Axion` | REST API client — fetches market data, fundamentals, filings, etc. |
+| `ta` | Technical analysis — 25+ indicators operating on pandas DataFrames |
+| `visualize` | Interactive Plotly charts — candlesticks, heatmaps, treemaps, and more |
+| `utils` | DataFrame manipulation, date parsing, caching, and concurrency helpers |
+| `models` | ML forecasting — linear regression, multi-feature regression, beta, LSTM |
+
+## What data is available
+
+<CardGroup cols={2}>
+  <Card title="Market data" icon="chart-candlestick">
+    Historical and real-time OHLCV prices for stocks, crypto, forex, futures, and indices.
+  </Card>
+  <Card title="Company fundamentals" icon="building">
+    Financial statements, earnings history, analyst estimates, SEC filings, and insider ownership.
+  </Card>
+  <Card title="Alternative data" icon="satellite-dish">
+    Sentiment (social, news, analyst), ESG scores, credit ratings, supply chain, and web traffic.
+  </Card>
+  <Card title="Macro data" icon="globe">
+    Economic calendar events and FRED-style dataset search for macroeconomic series.
+  </Card>
+</CardGroup>
+
+## Design principles
+
+**pandas-native**: All API responses return Python dicts or lists that convert directly to DataFrames via `utils.df()`. Technical analysis functions accept DataFrames and return Series.
+
+**Flat, predictable API**: Every resource namespace (`client.stocks`, `client.earnings`, etc.) exposes the same three methods where applicable — `tickers`, `quote`/profile variant, and `prices`.
+
+**Jupyter-first**: The `visualize` module renders interactive Plotly charts inline in notebooks. The `utils.work()` helper adds a progress bar for concurrent data fetches.
+
+**Local caching**: `utils.cache()` and related helpers let you persist expensive API calls to disk and reload them across sessions without re-fetching.
+
+## Requirements
+
+- Python 3.8+
+- An Axion API key ([get one free](https://axionquant.com/dashboard/api-keys))
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install the SDK and make your first API call.
+  </Card>
+  <Card title="API Client overview" icon="database" href="/client/overview">
+    See all available data namespaces and endpoints.
+  </Card>
+</CardGroup>

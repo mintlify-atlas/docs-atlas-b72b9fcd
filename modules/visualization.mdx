@@ -1,0 +1,386 @@
+---
+title: "Visualization"
+description: "Complete reference for the `visualize` module — interactive Plotly charts for financial data analysis."
+---
+
+The `visualize` module renders interactive Plotly charts directly in Jupyter notebooks or in your default browser. All functions accept pandas DataFrames.
+
+```python
+from axion import visualize
+```
+
+---
+
+## Price charts
+
+### `visualize.candles` — Candlestick chart
+
+Renders an interactive OHLCV candlestick chart. Requires `time`, `open`, `high`, `low`, and `close` columns.
+
+```python
+visualize.candles(df)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame with `time`, `open`, `high`, `low`, and `close` columns.
+</ParamField>
+
+---
+
+### `visualize.line` — Line chart
+
+Simple line chart for a single series.
+
+```python
+visualize.line(df, x="time", y="close")
+visualize.line(df, x="time", y="close", log=True)  # log scale
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for the x-axis.
+</ParamField>
+<ParamField path="y" type="string" required>
+  Column name for the y-axis.
+</ParamField>
+<ParamField path="log" type="boolean" default="false">
+  Use a logarithmic y-axis scale.
+</ParamField>
+
+---
+
+### `visualize.polls` — Multi-series line chart
+
+Plots all columns in the DataFrame against the index. Useful for comparing multiple price series or indicator values over time.
+
+```python
+# Compare close prices for multiple tickers on the same chart
+df = utils.snap([df_aapl, df_msft, df_goog], names=["AAPL", "MSFT", "GOOG"], col="time")
+visualize.polls(df)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  DataFrame where each column is a series to plot.
+</ParamField>
+
+---
+
+### `visualize.spread` — Two-asset spread chart
+
+Renders two asset price lines plus a spread (difference) bar chart in a combined layout. `dfs` must be a list of exactly two DataFrames.
+
+```python
+visualize.spread([df_aapl, df_msft], x="time", y="close")
+```
+
+<ParamField path="dfs" type="DataFrame[]" required>
+  List of exactly two DataFrames to compare.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for the x-axis (shared between both DataFrames).
+</ParamField>
+<ParamField path="y" type="string" required>
+  Column name for the value to compare.
+</ParamField>
+
+---
+
+## Comparison and distribution charts
+
+### `visualize.bar` — Vertical bar chart
+
+```python
+visualize.bar(df, x="symbol", y="revenue")
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for bar labels (x-axis).
+</ParamField>
+<ParamField path="y" type="string" required>
+  Column name for bar values (y-axis).
+</ParamField>
+
+---
+
+### `visualize.barh` — Horizontal bar chart
+
+```python
+visualize.barh(df, x="revenue", y="symbol")
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for bar values (x-axis).
+</ParamField>
+<ParamField path="y" type="string" required>
+  Column name for bar labels (y-axis).
+</ParamField>
+
+---
+
+### `visualize.scatter` — Scatter plot
+
+Plots two variables against each other. Supports log scale, hover labels, and color grouping.
+
+```python
+visualize.scatter(df, x="pe_ratio", y="revenue_growth", group="sector", hover=["symbol"])
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for the x-axis.
+</ParamField>
+<ParamField path="y" type="string" required>
+  Column name for the y-axis.
+</ParamField>
+<ParamField path="log" type="boolean" default="false">
+  Use a logarithmic scale on both axes.
+</ParamField>
+<ParamField path="hover" type="string[]" default="[]">
+  Additional column names to show in the hover tooltip.
+</ParamField>
+<ParamField path="group" type="string" default="null">
+  Column name to use for color grouping.
+</ParamField>
+
+---
+
+### `visualize.fit` — Scatter with OLS trendline
+
+Identical to `scatter` but adds an OLS (ordinary least squares) regression trendline.
+
+```python
+visualize.fit(df, x="pe_ratio", y="fwd_return", group="sector", hover=["symbol"])
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for the x-axis.
+</ParamField>
+<ParamField path="y" type="string" required>
+  Column name for the y-axis.
+</ParamField>
+<ParamField path="log" type="boolean" default="false">
+  Use a logarithmic scale on both axes.
+</ParamField>
+<ParamField path="hover" type="string[]" default="[]">
+  Additional column names to show in the hover tooltip.
+</ParamField>
+<ParamField path="group" type="string" default="null">
+  Column name to use for color grouping.
+</ParamField>
+
+---
+
+### `visualize.area` — Grouped area chart
+
+Stacked or grouped area chart. The `sub` parameter adds an optional secondary trace.
+
+```python
+visualize.area(df, x="time", y="revenue", group="segment", sub="net_income")
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for the x-axis.
+</ParamField>
+<ParamField path="y" type="string" required>
+  Column name for the area values.
+</ParamField>
+<ParamField path="group" type="string" required>
+  Column name to group areas by.
+</ParamField>
+<ParamField path="sub" type="string" default="">
+  Optional column name for a secondary line trace.
+</ParamField>
+
+---
+
+### `visualize.pie` — Pie chart
+
+```python
+visualize.pie(df, values="market_cap", labels="sector")
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="values" type="string" required>
+  Column name for slice sizes.
+</ParamField>
+<ParamField path="labels" type="string" required>
+  Column name for slice labels.
+</ParamField>
+
+---
+
+### `visualize.radar` — Radar / spider chart
+
+Multi-dimensional comparison chart. Useful for comparing a single entity across several metrics.
+
+```python
+visualize.radar(df, values="score", labels="metric")
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="values" type="string" required>
+  Column name for metric values.
+</ParamField>
+<ParamField path="labels" type="string" required>
+  Column name for metric labels (axes).
+</ParamField>
+
+---
+
+## Heatmaps and correlation
+
+### `visualize.heatmap` — Density heatmap
+
+Two-dimensional density chart. Useful for visualizing the joint distribution of two variables.
+
+```python
+visualize.heatmap(df, x="volume", y="return", hover=["symbol"])
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for the x-axis.
+</ParamField>
+<ParamField path="y" type="string" required>
+  Column name for the y-axis.
+</ParamField>
+<ParamField path="hover" type="string[]" default="[]">
+  Additional column names to show in the hover tooltip.
+</ParamField>
+
+---
+
+### `visualize.cov` — Correlation heatmap
+
+Computes and renders a pairwise correlation matrix for all numeric columns in the DataFrame.
+
+```python
+visualize.cov(df)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  DataFrame with numeric columns to correlate.
+</ParamField>
+
+<Tip>
+  Before calling `visualize.cov`, drop non-numeric or identifier columns such as `time` and `symbol` to avoid cluttering the matrix.
+</Tip>
+
+```python
+# Drop non-numeric columns first
+visualize.cov(df.drop(columns=["time", "symbol"]))
+```
+
+---
+
+## Market and portfolio charts
+
+### `visualize.tree` — Treemap
+
+Renders a hierarchical treemap grouped by sector, industry, and symbol. Cell size represents market cap; color represents percentage change. Requires `sector`, `industry`, `symbol`, `marketCap`, `pctchange`, and `lastsale` columns.
+
+```python
+visualize.tree(df)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  DataFrame with `sector`, `industry`, `symbol`, `marketCap`, `pctchange`, and `lastsale` columns.
+</ParamField>
+
+---
+
+### `visualize.graph` — Flexible multi-series chart
+
+The most flexible chart in the module. Renders mixed bar, line, and area traces on a shared x-axis. Pass column names to the `bars`, `lines`, and `areas` lists to combine trace types in a single chart.
+
+```python
+visualize.graph(
+    df,
+    x="time",
+    bars=["volume"],
+    lines=["close", "ema_21", "ema_50"],
+    areas=["bb_upper", "bb_lower"],
+    title="AAPL — Price and Volume",
+    color="sector"
+)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  Source DataFrame.
+</ParamField>
+<ParamField path="x" type="string" required>
+  Column name for the shared x-axis.
+</ParamField>
+<ParamField path="bars" type="string[]" default="[]">
+  Column names to render as vertical bars.
+</ParamField>
+<ParamField path="lines" type="string[]" default="[]">
+  Column names to render as lines.
+</ParamField>
+<ParamField path="areas" type="string[]" default="[]">
+  Column names to render as filled area traces.
+</ParamField>
+<ParamField path="title" type="string" default="''">
+  Chart title.
+</ParamField>
+<ParamField path="color" type="string" default="null">
+  Column name to use for color grouping across traces.
+</ParamField>
+
+---
+
+## Full example
+
+This example fetches AAPL prices, computes technical indicators, and renders several chart types.
+
+```python
+from axion import Axion, ta, visualize, utils
+
+client = Axion(api_key="your_api_key")
+df = utils.df(client.stocks.prices("AAPL", from_date="2024-01-01"))
+
+# Compute indicators
+df["ema_21"] = ta.ema(df, period=21)
+df["rsi"]    = ta.rsi(df, period=14)
+macd_line, signal_line, histogram = ta.macd(df)
+df["macd"]      = macd_line
+df["signal"]    = signal_line
+df["histogram"] = histogram
+
+# Candlestick chart
+visualize.candles(df)
+
+# Mixed chart: volume bars + price/indicator lines
+visualize.graph(
+    df,
+    x="time",
+    bars=["volume", "histogram"],
+    lines=["close", "ema_21", "macd", "signal"],
+    title="AAPL — Full View"
+)
+
+# RSI line
+visualize.line(df, x="time", y="rsi")
+```

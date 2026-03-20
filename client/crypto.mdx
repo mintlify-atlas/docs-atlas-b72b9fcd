@@ -1,0 +1,112 @@
+---
+title: Crypto
+description: Access cryptocurrency tickers and historical price data for coins and tokens.
+---
+
+The `client.crypto` namespace covers the full universe of supported cryptocurrencies, including both layer-1 coins and ERC-20 style tokens.
+
+## Methods
+
+### `tickers`
+
+Returns all available cryptocurrency tickers, with an optional filter by asset type.
+
+<ParamField path="type" type="string">
+  Filter by asset type. Accepted values: `"coin"` or `"token"`.
+</ParamField>
+
+```python
+# All crypto tickers
+all_crypto = client.crypto.tickers()
+
+# Coins only (e.g. BTC, ETH)
+coins = client.crypto.tickers(type="coin")
+
+# Tokens only (e.g. ERC-20 tokens)
+tokens = client.crypto.tickers(type="token")
+```
+
+---
+
+### `ticker`
+
+Returns metadata for a single cryptocurrency by its symbol.
+
+<ParamField path="ticker" type="string" required>
+  The cryptocurrency ticker symbol (e.g. `"BTC"`, `"ETH"`, `"SOL"`).
+</ParamField>
+
+```python
+btc = client.crypto.ticker("BTC")
+print(btc["name"])   # Bitcoin
+print(btc["type"])   # coin
+```
+
+---
+
+### `prices`
+
+Returns historical OHLCV price data for the given cryptocurrency.
+
+<ParamField path="ticker" type="string" required>
+  The cryptocurrency ticker symbol.
+</ParamField>
+
+<ParamField path="from_date" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="to_date" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="frame" type="string">
+  Aggregation period. One of `daily`, `weekly`, `monthly`, `quarterly`, `yearly`. Defaults to `daily`.
+</ParamField>
+
+```python
+# Daily BTC prices for Q1 2025
+btc_prices = client.crypto.prices(
+    "BTC",
+    from_date="2025-01-01",
+    to_date="2025-03-31"
+)
+
+# Weekly ETH prices
+eth_weekly = client.crypto.prices(
+    "ETH",
+    from_date="2024-01-01",
+    to_date="2024-12-31",
+    frame="weekly"
+)
+```
+
+<Tip>
+  Crypto markets are active 24/7. Daily price frames reflect 00:00–23:59 UTC boundaries.
+</Tip>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# List all coins
+coins = client.crypto.tickers(type="coin")
+print(f"{len(coins)} coins available")
+
+# Get Solana metadata
+sol = client.crypto.ticker("SOL")
+print(sol["name"])  # Solana
+
+# Monthly SOL price history
+prices = client.crypto.prices(
+    "SOL",
+    from_date="2024-01-01",
+    to_date="2024-12-31",
+    frame="monthly"
+)
+for candle in prices:
+    print(candle["date"], candle["open"], candle["close"])
+```

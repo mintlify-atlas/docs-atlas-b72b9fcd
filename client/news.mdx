@@ -1,0 +1,103 @@
+---
+title: News
+description: Fetch general, company-specific, country-specific, and category-specific news articles.
+---
+
+The `client.news` namespace provides access to financial news articles across multiple dimensions — global headlines, company mentions, geographic focus, and topic categories.
+
+## Methods
+
+### `general`
+
+Returns a stream of general financial news articles. No parameters required.
+
+```python
+articles = client.news.general()
+for article in articles[:5]:
+    print(article["title"])
+    print(article["publisher"])
+    print(article["link"])
+    print()
+```
+
+---
+
+### `company`
+
+Returns news articles that mention a specific company.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`, `"TSLA"`).
+</ParamField>
+
+```python
+aapl_news = client.news.company("AAPL")
+for article in aapl_news[:5]:
+    print(article["title"], article["providerPublishTime"])
+```
+
+---
+
+### `country`
+
+Returns news articles focused on a specific country.
+
+<ParamField path="country" type="string" required>
+  ISO country code (e.g. `"US"`, `"GB"`, `"JP"`, `"DE"`).
+</ParamField>
+
+```python
+us_news = client.news.country("US")
+jp_news = client.news.country("JP")
+
+for article in us_news[:5]:
+    print(article["title"])
+```
+
+---
+
+### `category`
+
+Returns news articles for a specific topic category.
+
+<ParamField path="category" type="string" required>
+  Category name (e.g. `"technology"`, `"energy"`, `"markets"`, `"crypto"`).
+</ParamField>
+
+```python
+tech_news = client.news.category("technology")
+energy_news = client.news.category("energy")
+
+for article in tech_news[:5]:
+    print(article["title"], article["publisher"])
+```
+
+<Note>
+  Use `company()` for ticker-specific news monitoring and `general()` for broad market headline feeds.
+</Note>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# Global headlines
+headlines = client.news.general()
+print(f"{len(headlines)} general articles")
+
+# Watch a specific company
+nvda_news = client.news.company("NVDA")
+for article in nvda_news[:3]:
+    print(f"[{article['publisher']}] {article['title']}")
+
+# Regional focus
+eu_news = client.news.country("DE")
+print(f"{len(eu_news)} Germany-focused articles")
+
+# Topic feed
+crypto_news = client.news.category("crypto")
+for a in crypto_news[:3]:
+    print(a["title"])
+```

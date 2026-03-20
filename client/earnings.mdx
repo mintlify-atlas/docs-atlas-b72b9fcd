@@ -1,0 +1,105 @@
+---
+title: Earnings
+description: Retrieve historical earnings, trend estimates, index trends, and detailed quarterly reports.
+---
+
+The `client.earnings` namespace provides earnings-related data including EPS history, analyst estimates, and full quarterly report details.
+
+## Methods
+
+### `history`
+
+Returns historical EPS actuals, surprises, and estimate data for past quarters.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`).
+</ParamField>
+
+```python
+history = client.earnings.history("AAPL")
+for quarter in history:
+    print(quarter["quarter"], quarter["epsActual"], quarter["epsDifference"])
+```
+
+---
+
+### `trend`
+
+Returns forward-looking EPS estimates and trends across multiple forecast periods (current quarter, next quarter, current year, next year).
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+trend = client.earnings.trend("MSFT")
+for period in trend:
+    print(period["period"], period["earningsEstimate"]["avg"])
+```
+
+---
+
+### `index`
+
+Returns index-level trend estimates for the given ticker, providing a broader market context for earnings expectations.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+index_trend = client.earnings.index("SPY")
+print(index_trend)
+```
+
+---
+
+### `report`
+
+Returns a detailed earnings report for a specific fiscal year and quarter.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="year" type="string" required>
+  Fiscal year as a four-digit string (e.g. `"2024"`).
+</ParamField>
+
+<ParamField path="quarter" type="string" required>
+  Fiscal quarter as a single digit string: `"1"`, `"2"`, `"3"`, or `"4"`.
+</ParamField>
+
+```python
+# Q3 2024 earnings report for Apple
+report = client.earnings.report("AAPL", year="2024", quarter="3")
+print(report["epsActual"])
+print(report["revenueActual"])
+```
+
+<Warning>
+  Reports for the most recent incomplete quarter may not be available until the company has filed officially.
+</Warning>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+ticker = "NVDA"
+
+# Past EPS performance
+history = client.earnings.history(ticker)
+print(f"{len(history)} historical earnings periods")
+
+# Forward estimates
+trend = client.earnings.trend(ticker)
+for p in trend[:4]:
+    print(p["period"], p["earningsEstimate"]["avg"])
+
+# Specific quarterly report
+report = client.earnings.report(ticker, year="2024", quarter="2")
+print(f"EPS actual: {report['epsActual']}, surprise: {report['epsDifference']}")
+```

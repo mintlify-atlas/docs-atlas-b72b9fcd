@@ -1,0 +1,184 @@
+---
+title: "Caching"
+description: "Persist API responses to disk and reload them across sessions to avoid redundant fetches."
+keywords: ["caching", "cache", "pickle", "utils", "scribe", "work", "concurrent", "performance"]
+---
+
+Fetching large amounts of historical data on every script run is slow and consumes API quota. The `utils` module provides a file-based cache backed by Python's `pickle` format that persists responses to a local `.axion_cache/` directory.
+
+## How the cache works
+
+Cached objects are stored as `.pkl` files under `.axion_cache/` in your working directory:
+
+```
+your-project/
+├── analysis.py
+└── .axion_cache/
+    ├── aapl_prices.pkl
+    ├── msft_prices.pkl
+    └── gdp_series.pkl
+```
+
+The directory is created automatically on the first cache write. Add it to `.gitignore` to avoid committing large binary files.
+
+```bash .gitignore
+.axion_cache/
+```
+
+## `utils.cache()` — fetch-or-load
+
+`cache(id, fn)` is the primary helper. On the first call it executes `fn()`, saves the result, and returns it. On subsequent calls it loads the saved result and skips `fn()` entirely:
+
+```python
+from axion import Axion, utils as axion_utils
+import os
+
+client = Axion(api_key=os.getenv("AXION_API_KEY"))
+
+# First run: fetches from API and writes .axion_cache/aapl_prices.pkl
+# Subsequent runs: loads from disk, no API call made
+prices = axion_utils.cache(
+    "aapl_prices",
+    lambda: client.stocks.prices("AAPL", from_date="2024-01-01")
+)
+```
+
+<Tip>
+  Choose cache IDs that are unique per query. Include the ticker, date range, or any other parameters that affect the result in the ID string — for example, `"aapl_prices_2024"` rather than `"prices"`.
+</Tip>
+
+## `utils.save()` — manual write
+
+Save any Python object to the cache explicitly:
+
+```python
+from axion import utils as axion_utils
+
+# Save a processed DataFrame rather than raw API data
+prices = client.stocks.prices("AAPL", from_date="2024-01-01")
+df = axion_utils.df(prices)
+df["rsi"] = ta.rsi(df, column="close", period=14)
+
+axion_utils.save("aapl_with_rsi", df)
+```
+
+## `utils.read()` — manual read
+
+Load a previously saved object by its ID:
+
+```python
+from axion import utils as axion_utils
+
+df = axion_utils.read("aapl_with_rsi")
+
+if df is None:
+    print("Cache miss — run your fetch script first.")
+else:
+    print(df.head())
+```
+
+<Note>
+  `read()` returns `None` if the cache file does not exist. Always check the return value before using it.
+</Note>
+
+## `utils.scribe()` — cache + concurrent work
+
+`scribe(df, id, cb)` combines caching with `utils.work()`, which executes a callback concurrently across the rows of a DataFrame with a progress bar. Use it when you need to fetch data for many tickers and want to cache the combined result:
+
+```python
+import pandas as pd
+from axion import Axion, utils as axion_utils
+import os
+
+client = Axion(api_key=os.getenv("AXION_API_KEY"))
+
+# Build a DataFrame of tickers to process
+tickers_df = pd.DataFrame({"ticker": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]})
+
+def fetch_prices(row, data):
+    ticker = row["ticker"]
+    prices = client.stocks.prices(ticker, from_date="2024-01-01")
+    df = axion_utils.df(prices)
+    df["ticker"] = ticker
+    data[ticker] = df
+
+# Runs fetch_prices concurrently for each row, caches the result dict
+result = axion_utils.scribe(tickers_df, "all_prices_2024", fetch_prices)
+
+# result is a dict keyed by ticker
+all_prices = axion_utils.stack(list(result.values()))
+print(all_prices.shape)
+```
+
+On subsequent runs, `scribe()` loads the cached `result` dict directly without calling `fetch_prices` again.
+
+## `utils.work()` — threaded execution
+
+`work(df, callback, ref)` iterates over the rows of `df`, calling `callback(row, ref)` for each row in a thread pool. A progress bar is displayed in the terminal or Jupyter notebook.
+
+Use `work()` directly when you want concurrent fetching without caching:
+
+```python
+import pandas as pd
+from axion import Axion, utils as axion_utils
+import os
+
+client = Axion(api_key=os.getenv("AXION_API_KEY"))
+
+tickers_df = pd.DataFrame({"ticker": ["AAPL", "MSFT", "GOOGL"]})
+results = {}
+
+def fetch(row, data):
+    t = row["ticker"]
+    data[t] = axion_utils.df(client.stocks.prices(t, from_date="2024-01-01"))
+
+axion_utils.work(tickers_df, fetch, results)
+print(results.keys())  # dict_keys(['AAPL', 'MSFT', 'GOOGL'])
+```
+
+## Practical example: 100 stocks with caching
+
+Fetch prices for a large universe of stocks concurrently, cache the result, and load it on repeat runs:
+
+```python universe_fetch.py
+import pandas as pd
+import os
+from axion import Axion, utils as axion_utils
+
+client = Axion(api_key=os.getenv("AXION_API_KEY"))
+
+# Build universe DataFrame
+sp100_tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]  # ... up to 100
+universe_df = pd.DataFrame({"ticker": sp100_tickers})
+
+def fetch_prices(row, data):
+    ticker = row["ticker"]
+    try:
+        prices = client.stocks.prices(ticker, from_date="2023-01-01")
+        df = axion_utils.df(prices)
+        df["ticker"] = ticker
+        data[ticker] = df
+    except Exception as e:
+        print(f"Failed to fetch {ticker}: {e}")
+
+# First run: fetches all 100 tickers concurrently, caches result
+# Subsequent runs: loads from .axion_cache/sp100_prices_2023.pkl instantly
+result = axion_utils.scribe(universe_df, "sp100_prices_2023", fetch_prices)
+
+# Combine into a single DataFrame
+all_prices = axion_utils.stack([df for df in result.values() if df is not None])
+print(f"Loaded {all_prices['ticker'].nunique()} tickers, {len(all_prices)} rows")
+```
+
+<Warning>
+  Cached data does not refresh automatically. Delete the `.pkl` file or use a new cache ID when you need up-to-date data.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Working with DataFrames" icon="table" href="/guides/dataframes">
+    Manipulate and combine the data you load from cache.
+  </Card>
+  <Card title="Error handling" icon="triangle-alert" href="/guides/error-handling">
+    Handle failures inside concurrent fetch callbacks.
+  </Card>
+</CardGroup>

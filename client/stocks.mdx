@@ -1,0 +1,115 @@
+---
+title: Stocks
+description: Retrieve equity tickers, metadata, and historical price data using the Stocks API.
+---
+
+The `client.stocks` namespace provides access to equity market data — from a full list of tradable tickers to OHLCV price history.
+
+## Methods
+
+### `tickers`
+
+Returns a list of all available stock tickers. Filter by country or exchange to narrow results.
+
+<ParamField path="country" type="string">
+  ISO country code to filter tickers by country of listing (e.g. `"US"`, `"GB"`).
+</ParamField>
+
+<ParamField path="exchange" type="string">
+  Exchange identifier to filter tickers (e.g. `"NASDAQ"`, `"NYSE"`).
+</ParamField>
+
+```python
+# All tickers
+tickers = client.stocks.tickers()
+
+# US-listed tickers only
+us_tickers = client.stocks.tickers(country="US")
+
+# NASDAQ tickers
+nasdaq = client.stocks.tickers(exchange="NASDAQ")
+```
+
+---
+
+### `ticker`
+
+Returns metadata for a single stock identified by its symbol.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`, `"TSLA"`).
+</ParamField>
+
+```python
+aapl = client.stocks.ticker("AAPL")
+print(aapl["name"])       # Apple Inc.
+print(aapl["exchange"])   # NASDAQ
+```
+
+---
+
+### `prices`
+
+Returns historical OHLCV price data for the given ticker.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="from_date" type="string">
+  Start date in `YYYY-MM-DD` format. Defaults to the earliest available date.
+</ParamField>
+
+<ParamField path="to_date" type="string">
+  End date in `YYYY-MM-DD` format. Defaults to the most recent trading day.
+</ParamField>
+
+<ParamField path="frame" type="string">
+  Aggregation period. One of `daily`, `weekly`, `monthly`, `quarterly`, `yearly`. Defaults to `daily`.
+</ParamField>
+
+```python
+# Daily prices for the last 30 days
+prices = client.stocks.prices(
+    "AAPL",
+    from_date="2025-02-18",
+    to_date="2025-03-20"
+)
+
+# Monthly prices for a full year
+monthly = client.stocks.prices(
+    "MSFT",
+    from_date="2024-01-01",
+    to_date="2024-12-31",
+    frame="monthly"
+)
+```
+
+<Note>
+  The `frame` parameter defaults to `daily`. When requesting large date ranges, consider using `weekly` or `monthly` frames to reduce response size.
+</Note>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# Find all NYSE-listed tickers
+nyse_tickers = client.stocks.tickers(exchange="NYSE")
+
+# Inspect a specific ticker
+meta = client.stocks.ticker("IBM")
+print(meta["name"], meta["country"])
+
+# Fetch weekly prices over 2 years
+history = client.stocks.prices(
+    "IBM",
+    from_date="2023-01-01",
+    to_date="2024-12-31",
+    frame="weekly"
+)
+for row in history:
+    print(row["date"], row["close"])
+```

@@ -1,0 +1,108 @@
+---
+title: Futures
+description: Access futures contract tickers and historical price data, with optional filtering by exchange.
+---
+
+The `client.futures` namespace covers futures contracts across commodities, financials, indices, and more.
+
+## Methods
+
+### `tickers`
+
+Returns all available futures tickers, optionally filtered by exchange.
+
+<ParamField path="exchange" type="string">
+  Exchange identifier to filter contracts (e.g. `"CME"`, `"CBOT"`, `"NYMEX"`).
+</ParamField>
+
+```python
+# All futures contracts
+all_futures = client.futures.tickers()
+
+# CME contracts only
+cme = client.futures.tickers(exchange="CME")
+```
+
+---
+
+### `ticker`
+
+Returns metadata for a single futures contract.
+
+<ParamField path="ticker" type="string" required>
+  The futures contract symbol (e.g. `"ES=F"`, `"CL=F"`).
+</ParamField>
+
+```python
+es = client.futures.ticker("ES=F")
+print(es["name"])      # E-mini S&P 500
+print(es["exchange"])  # CME
+```
+
+---
+
+### `prices`
+
+Returns historical price data for a futures contract.
+
+<ParamField path="ticker" type="string" required>
+  The futures contract symbol.
+</ParamField>
+
+<ParamField path="from_date" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="to_date" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField path="frame" type="string">
+  Aggregation period. One of `daily`, `weekly`, `monthly`, `quarterly`, `yearly`. Defaults to `daily`.
+</ParamField>
+
+```python
+# Daily crude oil prices for 2024
+cl_prices = client.futures.prices(
+    "CL=F",
+    from_date="2024-01-01",
+    to_date="2024-12-31"
+)
+
+# Weekly E-mini S&P 500 prices
+es_weekly = client.futures.prices(
+    "ES=F",
+    from_date="2024-01-01",
+    to_date="2024-12-31",
+    frame="weekly"
+)
+```
+
+<Note>
+  Futures tickers often include a suffix like `=F` to distinguish the continuous front-month contract from the underlying spot instrument.
+</Note>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+# List NYMEX contracts
+nymex = client.futures.tickers(exchange="NYMEX")
+
+# Inspect natural gas contract
+ng = client.futures.ticker("NG=F")
+print(ng["name"])
+
+# Monthly price history
+prices = client.futures.prices(
+    "NG=F",
+    from_date="2023-01-01",
+    to_date="2024-12-31",
+    frame="monthly"
+)
+for row in prices:
+    print(row["date"], row["close"])
+```

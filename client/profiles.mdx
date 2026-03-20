@@ -1,0 +1,144 @@
+---
+title: Profiles
+description: Access company profiles, key statistics, analyst recommendations, market summaries, and earnings calendars.
+---
+
+The `client.profiles` namespace aggregates company-level descriptive and analytical data, from business summaries to dividend calendars.
+
+## Methods
+
+### `profile`
+
+Returns the asset profile including a business summary and sector/industry classification.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol (e.g. `"AAPL"`).
+</ParamField>
+
+```python
+profile = client.profiles.profile("AAPL")
+print(profile["longBusinessSummary"])
+print(profile["sector"])    # Technology
+print(profile["industry"])  # Consumer Electronics
+```
+
+---
+
+### `info`
+
+Returns structured company information including address, employee count, website, and executives.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+info = client.profiles.info("MSFT")
+print(info["website"])       # https://www.microsoft.com
+print(info["fullTimeEmployees"])
+```
+
+---
+
+### `statistics`
+
+Returns key financial ratios and valuation statistics such as P/E, P/B, EPS, beta, and market cap.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+stats = client.profiles.statistics("GOOGL")
+print(stats["trailingPE"])
+print(stats["priceToBook"])
+print(stats["beta"])
+```
+
+---
+
+### `summary`
+
+Returns a market data summary including current price, volume, 52-week range, and average volume.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+summary = client.profiles.summary("TSLA")
+print(summary["regularMarketPrice"])
+print(summary["fiftyTwoWeekHigh"])
+print(summary["averageVolume"])
+```
+
+---
+
+### `recommendation`
+
+Returns analyst recommendation trends, showing buy/hold/sell counts over recent periods.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+recs = client.profiles.recommendation("AMZN")
+for period in recs:
+    print(period["period"], period["strongBuy"], period["buy"], period["hold"], period["sell"])
+```
+
+---
+
+### `calendar`
+
+Returns upcoming earnings dates and dividend information for the ticker.
+
+<ParamField path="ticker" type="string" required>
+  The stock ticker symbol.
+</ParamField>
+
+```python
+calendar = client.profiles.calendar("AAPL")
+print(calendar["earnings"]["earningsDate"])
+print(calendar["dividendDate"])
+print(calendar["exDividendDate"])
+```
+
+<Note>
+  The `calendar` method returns forward-looking dates. If no upcoming earnings date is scheduled, the field may be absent.
+</Note>
+
+## Example: Full workflow
+
+```python
+from axion import Axion
+
+client = Axion(api_key="your_api_key_here")
+
+ticker = "NVDA"
+
+# Business description
+profile = client.profiles.profile(ticker)
+print(profile["longBusinessSummary"][:200])
+
+# Company contact info
+info = client.profiles.info(ticker)
+print(info["website"], info["city"], info["country"])
+
+# Valuation metrics
+stats = client.profiles.statistics(ticker)
+print(f"P/E: {stats['trailingPE']}, Beta: {stats['beta']}")
+
+# Live market summary
+summary = client.profiles.summary(ticker)
+print(f"Price: {summary['regularMarketPrice']}")
+
+# Analyst consensus
+recs = client.profiles.recommendation(ticker)
+print(recs[0])
+
+# Next earnings date
+cal = client.profiles.calendar(ticker)
+print(cal["earnings"]["earningsDate"])
+```
