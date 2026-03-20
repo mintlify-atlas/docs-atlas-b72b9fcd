@@ -15,7 +15,7 @@ from axion import models
 
 ### `models.linearRegression` — Single-feature linear regression forecast
 
-Fits a linear regression model using a timestamp column as the only feature, then projects `n_preds` future values at the specified time scale. Returns a DataFrame containing the original data plus predicted future rows.
+Fits a linear regression model using a timestamp column as the only feature, then projects `n_preds` future values at the specified time scale. Returns a DataFrame containing only the predicted future rows (with the timestamp column and the target column).
 
 ```python
 predictions = models.linearRegression(df, x="time", target="close", n_preds=10, scale="D")
@@ -108,14 +108,19 @@ from axion import Axion, models, utils
 client = Axion(api_key="your_api_key")
 
 # Fetch AAPL and SPY prices
-df_aapl = utils.df(client.stocks.prices("AAPL", from_date=utils.yearago))
-df_spy  = utils.df(client.stocks.prices("SPY",  from_date=utils.yearago))
+df_aapl = utils.df(client.stocks.prices("AAPL", from_date=utils.d(utils.yearago)))
+df_spy  = utils.df(client.stocks.prices("SPY",  from_date=utils.d(utils.yearago)))
 
-# Align and compute returns
+# Rename close columns to distinguish them before joining
+df_aapl = df_aapl.rename(columns={"close": "aapl_close"})
+df_spy  = df_spy.rename(columns={"close": "spy_close"})
+
+# Align on time and compute returns
 df = utils.stitch([df_aapl, df_spy], col="time")
-df = utils.relativity(df, cols=["close_x", "close_y"])
+df = utils.relativity(df, cols=["aapl_close", "spy_close"])
 
-beta = models.beta(df, x="close_x_pct", y="close_y_pct")
+# relative_aapl_close = AAPL pct returns, relative_spy_close = market pct returns
+beta = models.beta(df, x="relative_aapl_close", y="relative_spy_close")
 print(f"AAPL beta vs SPY: {beta:.4f}")
 ```
 

@@ -53,7 +53,7 @@ Returns filings of a specific form type for a company, with optional year and qu
 </ParamField>
 
 <ParamField path="quarter" type="string">
-  Fiscal quarter: `"1"`, `"2"`, `"3"`, or `"4"`.
+  Fiscal quarter, e.g. `"Q1"`, `"Q2"`, `"Q3"`, or `"Q4"`.
 </ParamField>
 
 <ParamField path="limit" type="integer">
@@ -64,9 +64,9 @@ Returns filings of a specific form type for a company, with optional year and qu
 # All 10-Q filings for Apple in 2024
 q_filings = client.filings.forms("AAPL", form_type="10-Q", year="2024")
 
-# Specific Q3 2024 10-Q
-q3 = client.filings.forms("AAPL", form_type="10-Q", year="2024", quarter="3", limit=1)
-print(q3[0]["url"])
+# Specific Q2 2024 10-Q
+q2 = client.filings.forms("AAPL", form_type="10-Q", year="2024", quarter="Q2", limit=1)
+print(q2[0]["url"])
 ```
 
 ---
@@ -96,7 +96,7 @@ Searches across all companies' filings for a given reporting year and quarter, w
 </ParamField>
 
 <ParamField path="quarter" type="string" required>
-  Reporting quarter: `"1"`, `"2"`, `"3"`, or `"4"`.
+  Reporting quarter, e.g. `"Q1"`, `"Q2"`, `"Q3"`, or `"Q4"`.
 </ParamField>
 
 <ParamField path="form" type="string">
@@ -109,10 +109,10 @@ Searches across all companies' filings for a given reporting year and quarter, w
 
 ```python
 # All 10-K filings from Q4 2023
-annual_search = client.filings.search(year="2023", quarter="4", form="10-K")
+annual_search = client.filings.search(year="2023", quarter="Q4", form="10-K")
 
 # All Q2 2024 filings for Tesla
-tesla_q2 = client.filings.search(year="2024", quarter="2", ticker="TSLA")
+tesla_q2 = client.filings.search(year="2024", quarter="Q2", ticker="TSLA")
 ```
 
 ## Example: Full workflow
@@ -136,6 +136,6 @@ annual = client.filings.forms("MSFT", form_type="10-K")
 print(f"Found {len(annual)} annual reports")
 
 # Search all S-1 filings in Q1 2024
-ipos = client.filings.search(year="2024", quarter="1", form="S-1")
+ipos = client.filings.search(year="2024", quarter="Q1", form="S-1")
 print(f"{len(ipos)} S-1 filings in Q1 2024")
 ```

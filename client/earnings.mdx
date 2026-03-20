@@ -67,12 +67,12 @@ Returns a detailed earnings report for a specific fiscal year and quarter.
 </ParamField>
 
 <ParamField path="quarter" type="string" required>
-  Fiscal quarter as a single digit string: `"1"`, `"2"`, `"3"`, or `"4"`.
+  Fiscal quarter string, e.g. `"Q1"`, `"Q2"`, `"Q3"`, or `"Q4"`.
 </ParamField>
 
 ```python
 # Q3 2024 earnings report for Apple
-report = client.earnings.report("AAPL", year="2024", quarter="3")
+report = client.earnings.report("AAPL", year="2024", quarter="Q3")
 print(report["epsActual"])
 print(report["revenueActual"])
 ```
@@ -100,6 +100,6 @@ for p in trend[:4]:
     print(p["period"], p["earningsEstimate"]["avg"])
 
 # Specific quarterly report
-report = client.earnings.report(ticker, year="2024", quarter="2")
+report = client.earnings.report(ticker, year="2024", quarter="Q2")
 print(f"EPS actual: {report['epsActual']}, surprise: {report['epsDifference']}")
 ```

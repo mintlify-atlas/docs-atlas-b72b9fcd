@@ -45,45 +45,53 @@ ts = utils.to_timestamp("2024-01-01")  # 1704067200
 
 ### `utils.nearest_day` — Nearest market open day
 
-Returns the nearest market open day for a given date. Skips weekends. Pass `force=True` to always round forward.
+Returns the nearest market open day for a given date. Saturdays are shifted back to Friday; Sundays are shifted forward to Monday. Weekdays are returned unchanged.
 
 ```python
-utils.nearest_day("2024-03-02")           # skips Saturday -> "2024-03-01"
-utils.nearest_day("2024-03-02", force=True)  # forces forward -> "2024-03-04"
+utils.nearest_day("2024-03-02")  # Saturday -> "2024-02-29" (Friday)
+utils.nearest_day("2024-03-03")  # Sunday   -> "2024-03-04" (Monday)
+utils.nearest_day("2024-03-04")  # Monday   -> "2024-03-04" (no change)
 ```
 
 <ParamField path="date_str" type="string" required>
   Date string in `"YYYY-MM-DD"` format.
 </ParamField>
 <ParamField path="force" type="boolean" default="false">
-  When `True`, always rounds to the next open day rather than the nearest.
+  Accepted but currently unused. Reserved for future behavior.
 </ParamField>
 
 ---
 
 ### Date shorthand constants
 
-Convenience constants for common relative dates and time-scale abbreviations. All date constants are `"YYYY-MM-DD"` strings computed at import time.
+Convenience constants for common relative dates and time-scale abbreviations. The date string constants resolve at import time to literal string values.
 
 | Constant | Type | Value |
 |---|---|---|
-| `utils.today` | string | Current date |
-| `utils.yesterday` | string | Yesterday |
-| `utils.weekago` | string | 7 days ago |
-| `utils.monthago` | string | 30 days ago |
-| `utils.yearago` | string | 365 days ago |
-| `utils.yearfrom` | string | 365 days from now |
-| `utils.d` | string | `"D"` (daily) |
+| `utils.today` | string | `"today"` |
+| `utils.now` | string | `"today"` |
+| `utils.yesterday` | string | `"1 day ago"` |
+| `utils.tomorrow` | string | `"1 day from now"` |
+| `utils.weekago` | string | `"1 week ago"` |
+| `utils.weekfrom` | string | `"1 week from today"` |
+| `utils.monthago` | string | `"1 month ago"` |
+| `utils.monthfrom` | string | `"1 month from now"` |
+| `utils.yearago` | string | `"1 year ago"` |
+| `utils.yearfrom` | string | `"1 year from now"` |
 | `utils.w` | string | `"W"` (weekly) |
 | `utils.m` | string | `"M"` (monthly) |
 | `utils.y` | string | `"Y"` (yearly) |
+| `utils.h` | string | `"H"` (hourly) |
+
+These constants are natural language strings intended for use with `utils.d()`:
 
 ```python
-prices = client.stocks.prices("AAPL", from_date=utils.yearago, to_date=utils.today)
+from_date = utils.d(utils.yearago)  # converts "1 year ago" -> "YYYY-MM-DD"
+prices = client.stocks.prices("AAPL", from_date=from_date)
 ```
 
 <Warning>
-  `utils.d` is overloaded — it is both the `d()` function and the `"D"` daily scale constant. In most contexts Python resolves this to the function. Use `utils.d` as a string only in assignments like `scale=utils.d`.
+  `utils.d` resolves to the `d()` function, not the `"D"` daily scale string constant. The module-level `d = 'D'` constant is defined first but is immediately shadowed by the `def d(date_string)` function definition. Use the string literal `"D"` for the daily scale parameter.
 </Warning>
 
 ---
@@ -157,14 +165,15 @@ df = utils.stitch([df_prices, df_earnings], col="time")
 Merges same-type DataFrames side-by-side on a shared column. Supports column renaming to distinguish overlapping column names from different sources.
 
 ```python
-# Merge AAPL and MSFT close prices side by side, renaming columns by ticker
+# Merge AAPL and MSFT close prices side by side, renaming the "close" column
 df = utils.snap(
     [df_aapl, df_msft],
     names=["AAPL", "MSFT"],
-    overwrite=["close", "volume"],
+    overwrite=["close"],
     col="time"
 )
-# Result columns: time, AAPL_close, AAPL_volume, MSFT_close, MSFT_volume
+# The "close" column from the first DataFrame is renamed to "AAPL"
+# The "close" column from the second DataFrame is renamed to "MSFT_close"
 ```
 
 <ParamField path="dfs" type="DataFrame[]" required>
@@ -222,11 +231,11 @@ df_2024 = utils.resample(df, "2024-01-01 2024-12-31")
 ### `utils.dedup` — Remove duplicates from a list
 
 ```python
-clean = utils.dedup(["AAPL", "MSFT", "AAPL", "GOOG"])  # ["AAPL", "MSFT", "GOOG"]
+clean = utils.dedup(["AAPL", "MSFT", "AAPL", "GOOG"])  # e.g. ["AAPL", "GOOG", "MSFT"]
 ```
 
 <ParamField path="lst" type="list" required>
-  List to deduplicate. Order is preserved.
+  List to deduplicate. Uses `set()` internally so original order is not guaranteed.
 </ParamField>
 
 ---
@@ -249,11 +258,11 @@ flat = utils.simmer([["AAPL", "MSFT"], ["GOOG", "AMZN"]])  # ["AAPL", "MSFT", "G
 
 ### `utils.relativity` — Add percentage change columns
 
-Adds `pct_change` variants of specified columns to the DataFrame in-place.
+Adds `relative_{col}` percentage change columns for each specified column, drops `NaN` rows, and returns the modified DataFrame.
 
 ```python
 df = utils.relativity(df, cols=["close", "volume"])
-# Adds columns: close_pct, volume_pct
+# Adds columns: relative_close, relative_volume
 ```
 
 <ParamField path="df" type="DataFrame" required>
@@ -341,17 +350,17 @@ diff_df = utils.compare([df_aapl, df_msft], joins=["fact", "label"])
 
 ### `utils.gainers` — Top gainers from a price dict
 
-Returns a DataFrame of the top gaining tickers within a specified time frame.
+Returns a DataFrame of the top gaining tickers over a trailing window of `frame` periods (rows).
 
 ```python
-top = utils.gainers(prices, frame="2024-01-01 2024-06-30", col="close", limit=20)
+top = utils.gainers(prices, frame=20, col="close", limit=20)
 ```
 
 <ParamField path="prices" type="dict" required>
   Dict mapping ticker strings to price DataFrames.
 </ParamField>
-<ParamField path="frame" type="string" required>
-  Date range as `"YYYY-MM-DD YYYY-MM-DD"`.
+<ParamField path="frame" type="integer" required>
+  Number of trailing periods (rows) to measure the gain over. For example, `20` compares the last price to the price 20 rows ago.
 </ParamField>
 <ParamField path="col" type="string" default="close">
   Column to measure gain from.
@@ -360,27 +369,29 @@ top = utils.gainers(prices, frame="2024-01-01 2024-06-30", col="close", limit=20
   Maximum number of results to return.
 </ParamField>
 <ParamField path="relative" type="boolean" default="true">
-  Return percentage gain when `True`; absolute when `False`.
+  Return percentage gain when `True`; absolute price difference when `False`.
 </ParamField>
 <ParamField path="reverse" type="boolean" default="true">
   Sort descending (highest first) when `True`.
 </ParamField>
 
+Returns a DataFrame with `ticker` and `change` columns.
+
 ---
 
 ### `utils.losers` — Top losers from a price dict
 
-Returns a DataFrame of the top losing tickers within a specified time frame.
+Returns a DataFrame of the top losing tickers over a trailing window of `frame` periods.
 
 ```python
-bottom = utils.losers(prices, frame="2024-01-01 2024-06-30", col="close", limit=20)
+bottom = utils.losers(prices, frame=20, col="close", limit=20)
 ```
 
 <ParamField path="prices" type="dict" required>
   Dict mapping ticker strings to price DataFrames.
 </ParamField>
-<ParamField path="frame" type="string" required>
-  Date range as `"YYYY-MM-DD YYYY-MM-DD"`.
+<ParamField path="frame" type="integer" required>
+  Number of trailing periods (rows) to measure the loss over.
 </ParamField>
 <ParamField path="col" type="string" default="close">
   Column to measure loss from.
@@ -432,27 +443,33 @@ unique_tickers = utils.difference([df_sp500, df_nasdaq], col="symbol")
 
 ### `utils.work` — Threaded execution with progress bar
 
-Runs a callback function for each row in a DataFrame using a thread pool, collecting results into a dict. Displays a `tqdm` progress bar. The callback receives a single DataFrame row and must return a `(key, value)` tuple.
+Runs a callback function for each row in a DataFrame using a thread pool (10 workers), collecting results into a dict passed by reference. Displays a `tqdm` progress bar. The callback receives a single DataFrame row and must return a `(key, value)` tuple which is unpacked internally.
 
 ```python
+results = {}
+
 def fetch_earnings(row):
     ticker = row["symbol"]
     data = client.earnings.history(ticker)
     return (ticker, utils.df(data))
 
-results = utils.work(df_tickers, callback=fetch_earnings, ref="symbol")
-# results is a dict: {"AAPL": df_aapl_earnings, "MSFT": df_msft_earnings, ...}
+utils.work(df_tickers, fetch_earnings, results)
+# results is now a dict: {"AAPL": df_aapl_earnings, "MSFT": df_msft_earnings, ...}
 ```
 
 <ParamField path="df" type="DataFrame" required>
-  DataFrame whose rows are iterated over.
+  DataFrame whose rows are iterated over (via `iterrows`).
 </ParamField>
-<ParamField path="callback" type="callable" required>
-  Function called for each row. Receives a row (Series-like) and must return a `(key, value)` tuple.
+<ParamField path="cb" type="callable" required>
+  Function called for each row. Receives a single row (`pd.Series`) and must return a `(key, value)` tuple. The key is used as the dict key in `ref`.
 </ParamField>
-<ParamField path="ref" type="string" required>
-  Column name used as the dict key in the output. Typically a ticker or identifier column.
+<ParamField path="ref" type="dict" required>
+  An empty dict passed by reference. Results are stored in it as `ref[key] = value`.
 </ParamField>
+
+<Note>
+  `utils.work` does not return a value — results accumulate in the `ref` dict you pass. Always initialize it as an empty dict before calling `work()`.
+</Note>
 
 <Tip>
   `utils.work` is the recommended way to fetch data for a large list of tickers without hitting sequential request bottlenecks. Combine it with `utils.cache` to avoid re-fetching on subsequent notebook runs.
@@ -551,16 +568,16 @@ df_tickers = utils.df(tickers_data)
 # Fetch prices for all tickers with caching
 def fetch_price(row):
     ticker = row["symbol"]
-    data = client.stocks.prices(ticker, from_date=utils.yearago, to_date=utils.today)
+    data = client.stocks.prices(ticker, from_date=utils.d(utils.yearago), to_date=utils.d(utils.today))
     return (ticker, utils.df(data))
 
 prices = utils.scribe(df_tickers, id="prices_ytd", cb=fetch_price)
 
-# Find top 20 gainers and losers
-gainers = utils.gainers(prices, frame=f"{utils.yearago} {utils.today}", limit=20)
-losers  = utils.losers(prices,  frame=f"{utils.yearago} {utils.today}", limit=20)
+# Find top 20 gainers and losers over the last 252 trading days
+gainers = utils.gainers(prices, frame=252, limit=20)
+losers  = utils.losers(prices,  frame=252, limit=20)
 
 # Visualize
-visualize.barh(gainers, x="return", y="symbol")
-visualize.barh(losers,  x="return", y="symbol")
+visualize.barh(gainers, x="change", y="ticker")
+visualize.barh(losers,  x="change", y="ticker")
 ```

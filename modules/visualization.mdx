@@ -46,7 +46,7 @@ visualize.line(df, x="time", y="close", log=True)  # log scale
   Column name for the y-axis.
 </ParamField>
 <ParamField path="log" type="boolean" default="false">
-  Use a logarithmic y-axis scale.
+  Use a logarithmic x-axis scale.
 </ParamField>
 
 ---
@@ -143,7 +143,7 @@ visualize.scatter(df, x="pe_ratio", y="revenue_growth", group="sector", hover=["
   Column name for the y-axis.
 </ParamField>
 <ParamField path="log" type="boolean" default="false">
-  Use a logarithmic scale on both axes.
+  Use a logarithmic x-axis scale.
 </ParamField>
 <ParamField path="hover" type="string[]" default="[]">
   Additional column names to show in the hover tooltip.
@@ -172,7 +172,7 @@ visualize.fit(df, x="pe_ratio", y="fwd_return", group="sector", hover=["symbol"]
   Column name for the y-axis.
 </ParamField>
 <ParamField path="log" type="boolean" default="false">
-  Use a logarithmic scale on both axes.
+  Use a logarithmic x-axis scale.
 </ParamField>
 <ParamField path="hover" type="string[]" default="[]">
   Additional column names to show in the hover tooltip.
@@ -185,10 +185,10 @@ visualize.fit(df, x="pe_ratio", y="fwd_return", group="sector", hover=["symbol"]
 
 ### `visualize.area` — Grouped area chart
 
-Stacked or grouped area chart. The `sub` parameter adds an optional secondary trace.
+Stacked area chart grouped by a categorical column.
 
 ```python
-visualize.area(df, x="time", y="revenue", group="segment", sub="net_income")
+visualize.area(df, x="time", y="revenue", group="segment")
 ```
 
 <ParamField path="df" type="DataFrame" required>
@@ -201,10 +201,7 @@ visualize.area(df, x="time", y="revenue", group="segment", sub="net_income")
   Column name for the area values.
 </ParamField>
 <ParamField path="group" type="string" required>
-  Column name to group areas by.
-</ParamField>
-<ParamField path="sub" type="string" default="">
-  Optional column name for a secondary line trace.
+  Column name to group and color areas by.
 </ParamField>
 
 ---

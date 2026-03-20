@@ -111,6 +111,26 @@ df["trima"] = ta.trima(df, column="close", period=14)
 
 ---
 
+### `ta.smm` — Simple Moving Median
+
+Rolling median of a column over a period. Less sensitive to outliers than SMA.
+
+```python
+df["smm"] = ta.smm(df, column="close", period=14)
+```
+
+<ParamField path="df" type="DataFrame" required>
+  OHLCV DataFrame.
+</ParamField>
+<ParamField path="column" type="string" default="close">
+  Column to compute the median over.
+</ParamField>
+<ParamField path="period" type="number" default="14">
+  Lookback window in bars.
+</ParamField>
+
+---
+
 ### `ta.kama` — Kaufman's Adaptive Moving Average
 
 Adjusts its speed based on market noise using an efficiency ratio. Slower in choppy markets, faster in trending markets.

@@ -83,7 +83,9 @@ else:
 
 ## `utils.scribe()` — cache + concurrent work
 
-`scribe(df, id, cb)` combines caching with `utils.work()`, which executes a callback concurrently across the rows of a DataFrame with a progress bar. Use it when you need to fetch data for many tickers and want to cache the combined result:
+`scribe(df, id, cb)` combines caching with `utils.work()`, which executes a callback concurrently across the rows of a DataFrame with a progress bar. Use it when you need to fetch data for many tickers and want to cache the combined result.
+
+The callback passed to `scribe` follows the same interface as `work()`: it receives a single row and must return a `(key, value)` tuple.
 
 ```python
 import pandas as pd
@@ -95,12 +97,12 @@ client = Axion(api_key=os.getenv("AXION_API_KEY"))
 # Build a DataFrame of tickers to process
 tickers_df = pd.DataFrame({"ticker": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]})
 
-def fetch_prices(row, data):
+def fetch_prices(row):
     ticker = row["ticker"]
     prices = client.stocks.prices(ticker, from_date="2024-01-01")
     df = axion_utils.df(prices)
     df["ticker"] = ticker
-    data[ticker] = df
+    return (ticker, df)
 
 # Runs fetch_prices concurrently for each row, caches the result dict
 result = axion_utils.scribe(tickers_df, "all_prices_2024", fetch_prices)
@@ -114,7 +116,9 @@ On subsequent runs, `scribe()` loads the cached `result` dict directly without c
 
 ## `utils.work()` — threaded execution
 
-`work(df, callback, ref)` iterates over the rows of `df`, calling `callback(row, ref)` for each row in a thread pool. A progress bar is displayed in the terminal or Jupyter notebook.
+`work(df, cb, ref)` iterates over the rows of `df`, calling `cb(row)` for each row in a thread pool (10 workers). Results are stored in the `ref` dict. A progress bar is displayed in the terminal or Jupyter notebook.
+
+The callback receives a single row and must return a `(key, value)` tuple. The `ref` dict is populated as `ref[key] = value`.
 
 Use `work()` directly when you want concurrent fetching without caching:
 
@@ -128,9 +132,9 @@ client = Axion(api_key=os.getenv("AXION_API_KEY"))
 tickers_df = pd.DataFrame({"ticker": ["AAPL", "MSFT", "GOOGL"]})
 results = {}
 
-def fetch(row, data):
+def fetch(row):
     t = row["ticker"]
-    data[t] = axion_utils.df(client.stocks.prices(t, from_date="2024-01-01"))
+    return (t, axion_utils.df(client.stocks.prices(t, from_date="2024-01-01")))
 
 axion_utils.work(tickers_df, fetch, results)
 print(results.keys())  # dict_keys(['AAPL', 'MSFT', 'GOOGL'])
@@ -151,15 +155,16 @@ client = Axion(api_key=os.getenv("AXION_API_KEY"))
 sp100_tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]  # ... up to 100
 universe_df = pd.DataFrame({"ticker": sp100_tickers})
 
-def fetch_prices(row, data):
+def fetch_prices(row):
     ticker = row["ticker"]
     try:
         prices = client.stocks.prices(ticker, from_date="2023-01-01")
         df = axion_utils.df(prices)
         df["ticker"] = ticker
-        data[ticker] = df
+        return (ticker, df)
     except Exception as e:
         print(f"Failed to fetch {ticker}: {e}")
+        return (ticker, None)
 
 # First run: fetches all 100 tickers concurrently, caches result
 # Subsequent runs: loads from .axion_cache/sp100_prices_2023.pkl instantly

@@ -61,7 +61,10 @@ Use `stitch()` to inner-join multiple DataFrames on a shared column (defaults to
 
 ```python
 prices_df = axion_utils.df(client.stocks.prices("AAPL", from_date="2024-01-01"))
-econ_df = axion_utils.df(client.macro.series("GDP"))
+
+# First search for the series, then fetch by its ID
+results = client.econ.search("unemployment rate")
+econ_df = axion_utils.df(client.econ.dataset(results[0]["id"]))
 
 joined = axion_utils.stitch([prices_df, econ_df], col="time")
 ```
@@ -103,14 +106,15 @@ q1 = axion_utils.resample(df, "2024-01-01 2024-03-31", col="time")
 
 ## Add percent-change columns with `utils.relativity()`
 
-Use `relativity()` to compute rolling percent changes across OHLCV columns:
+Use `relativity()` to compute percent changes for specified columns. New columns are named `relative_{col}`:
 
 ```python
 df = axion_utils.df(client.stocks.prices("AAPL", from_date="2024-01-01"))
-df = axion_utils.relativity(df)
+df = axion_utils.relativity(df, cols=["close", "volume"])
+# Adds: relative_close, relative_volume
 ```
 
-This appends `pct_change` variants of the numeric columns, useful for normalizing multiple assets to the same scale.
+This appends percentage change variants of the specified columns, useful for normalizing multiple assets to the same scale before comparison.
 
 ## Combine with technical analysis
 
