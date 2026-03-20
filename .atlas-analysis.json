@@ -1,0 +1,109 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Axion Python SDK",
+  "projectDescription": "A comprehensive Python SDK for financial market data, technical analysis, visualization, and machine learning — built for quantitative research in Jupyter notebooks and Python scripts.",
+  "theme": "sequoia",
+  "primaryColor": "#7c7c7c",
+  "lightColor": "#090909",
+  "darkColor": "#c6c6c6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "API Client",
+            "pages": [
+              "client/overview",
+              "client/stocks",
+              "client/crypto",
+              "client/forex",
+              "client/futures",
+              "client/indices",
+              "client/profiles",
+              "client/earnings",
+              "client/financials",
+              "client/insiders",
+              "client/filings",
+              "client/econ",
+              "client/etfs",
+              "client/news",
+              "client/sentiment",
+              "client/esg",
+              "client/credit",
+              "client/supply-chain",
+              "client/web-traffic"
+            ]
+          },
+          {
+            "group": "Modules",
+            "pages": [
+              "modules/technical-analysis",
+              "modules/visualization",
+              "modules/utils",
+              "modules/models"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/authentication",
+              "guides/dataframes",
+              "guides/error-handling",
+              "guides/caching"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Multi-asset market data (stocks, crypto, forex, futures, indices)",
+    "Company fundamentals: financials, earnings, filings, profiles, insiders",
+    "25+ technical analysis indicators (RSI, MACD, Bollinger Bands, Ichimoku, etc.)",
+    "Interactive Plotly charting via the visualize module",
+    "ML forecasting with linear regression, multi-linear regression, beta, and LSTM",
+    "Data utilities for DataFrame manipulation, concurrency, caching, and date handling",
+    "Economic calendar and FRED-style dataset search",
+    "Sentiment, ESG, credit ratings, and supply chain data"
+  ],
+  "publicApiSurface": [
+    "Axion(api_key)",
+    "client.stocks.tickers / quote / prices",
+    "client.crypto.tickers / quote / prices",
+    "client.forex.tickers / quote / prices",
+    "client.futures.tickers / quote / prices",
+    "client.indices.tickers / quote / prices",
+    "client.profiles.profile / info / statistics / summary / recommendation / calendar",
+    "client.earnings.history / trend / index / report",
+    "client.financials.revenue / net_income / free_cash_flow / metrics / snapshot",
+    "client.insiders.individuals / institutions / funds / ownership / transactions / activity",
+    "client.filings.filings / forms / search / desc_forms",
+    "client.econ.search / dataset / calendar",
+    "client.etfs.fund / holdings / exposure",
+    "client.news.general / company / country / category",
+    "client.sentiment.all / social / news / analyst",
+    "client.esg.data",
+    "client.credit.search / ratings",
+    "client.supply_chain.customers / suppliers / peers",
+    "client.web_traffic.traffic",
+    "ta.sma / ema / dema / ssma / trima / kama",
+    "ta.rsi / macd / roc / mom / cmo / stochastic_oscillator / williams_r / adx",
+    "ta.atr / bbands / kc",
+    "ta.obv / vpt / vwap",
+    "ta.vi / ichi / sar / fib",
+    "visualize.candles / line / bar / barh / scatter / fit / area / pie / radar / heatmap / cov / polls / spread / tree / graph",
+    "utils.df / pds / stack / stitch / snap / filter / resample",
+    "utils.d / to_timestamp / nearest_day",
+    "utils.relativity / indexed / composite / contrast / compare / gainers / losers / overlap / difference",
+    "utils.work / cache / save / read / scribe",
+    "models.linearRegression / multiLinearRegression / beta / lstm"
+  ]
+}
